@@ -1,0 +1,10 @@
+# runtime artifacts (regenerated each scrape)
+ads.json
+ads.csv
+ads.xlsx
+arbiter.db
+resolved_pages.json
+*.log
+__pycache__/
+*.pyc
+.DS_Store

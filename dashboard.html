@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Arbiter — Mass-Tort Ad Intelligence</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600;6..72,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#eceef2; --surface:#ffffff; --surface-2:#f6f7f9; --surface-3:#eef1f5;
+    --ink:#0e1726; --muted:#5d6776; --faint:#8a93a3;
+    --line:#e3e7ed; --line-2:#d6dbe3;
+    --brand:#0f5d4a; --brand-ink:#0a3d31; --brand-soft:#e6f0ec;
+    --brass:#a9772a; --brass-soft:#f6edda;
+    --active:#10876a; --inactive:#8a93a3; --info:#2563eb; --new:#2563eb;
+    --danger:#b23b3b;
+    --shadow:0 1px 2px rgba(14,23,38,.04),0 4px 16px rgba(14,23,38,.06);
+    --shadow-lg:0 8px 40px rgba(14,23,38,.16);
+    --serif:"Newsreader",Georgia,"Times New Roman",serif;
+    --sans:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    --mono:"IBM Plex Mono",ui-monospace,"SF Mono",Menlo,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--ink); font-family:var(--sans);
+    font-size:14px; line-height:1.45; -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:#d6e7e0}
+  a{color:inherit}
+  button{font-family:inherit;cursor:pointer}
+  .mono{font-family:var(--mono)}
+  .tnum{font-variant-numeric:tabular-nums}
+
+  /* ---------- Top bar ---------- */
+  .topbar{
+    position:sticky; top:0; z-index:40; background:var(--brand);
+    color:#eaf2ef; border-bottom:1px solid var(--brand-ink);
+    display:flex; align-items:center; gap:18px; padding:0 22px; height:60px;
+  }
+  .brand{display:flex; align-items:baseline; gap:10px; padding-right:18px; border-right:1px solid rgba(255,255,255,.16)}
+  .brand .mark{font-family:var(--serif); font-weight:600; font-size:23px; letter-spacing:.2px; color:#fff}
+  .brand .mark b{color:#e7c986; font-weight:600}
+  .brand .tag{font-family:var(--mono); font-size:10.5px; letter-spacing:.16em; text-transform:uppercase; color:#a9c7bd}
+  .sync{display:flex; align-items:center; gap:9px; font-size:12.5px; color:#c4dad2}
+  .pulse-dot{width:8px;height:8px;border-radius:50%;background:#5fd0a8;box-shadow:0 0 0 0 rgba(95,208,168,.6);animation:pulse 2.4s infinite}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(95,208,168,.55)}70%{box-shadow:0 0 0 7px rgba(95,208,168,0)}100%{box-shadow:0 0 0 0 rgba(95,208,168,0)}}
+  .sync b{color:#fff;font-weight:600}
+  .spacer{flex:1}
+  .tb-search{position:relative}
+  .tb-search input{
+    width:230px;background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.18);
+    color:#fff;border-radius:8px;padding:8px 11px 8px 32px;font-size:13px;outline:none;transition:.15s;
+  }
+  .tb-search input::placeholder{color:#a9c7bd}
+  .tb-search input:focus{background:rgba(255,255,255,.16);border-color:rgba(255,255,255,.4)}
+  .tb-search svg{position:absolute;left:9px;top:9px;opacity:.7}
+  .btn{
+    border:1px solid var(--line-2);background:var(--surface);color:var(--ink);
+    border-radius:8px;padding:8px 13px;font-size:13px;font-weight:500;display:inline-flex;
+    align-items:center;gap:7px;transition:.14s;white-space:nowrap;
+  }
+  .btn:hover{border-color:#b9c0cb;box-shadow:var(--shadow)}
+  .btn.ghost-light{background:rgba(255,255,255,.10);border-color:rgba(255,255,255,.22);color:#fff}
+  .btn.ghost-light:hover{background:rgba(255,255,255,.18)}
+  .btn.primary{background:#e7c986;border-color:#dab85f;color:#3c2c08;font-weight:600}
+  .btn.primary:hover{background:#edd49a}
+  .btn.sm{padding:6px 10px;font-size:12px}
+
+  /* ---------- KPI strip ---------- */
+  .wrap{padding:18px 22px 40px;max-width:1500px;margin:0 auto}
+  .kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:16px}
+  .kpi{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px;box-shadow:var(--shadow);position:relative;overflow:hidden}
+  .kpi .lab{font-size:11px;letter-spacing:.10em;text-transform:uppercase;color:var(--faint);font-weight:600}
+  .kpi .val{font-family:var(--serif);font-size:30px;font-weight:600;line-height:1.05;margin-top:7px;letter-spacing:-.01em}
+  .kpi .sub{font-size:11.5px;color:var(--muted);margin-top:3px;font-family:var(--mono)}
+  .kpi.scaling{background:linear-gradient(180deg,#fffdf8,#fff)}
+  .kpi.scaling .val{color:var(--brass)}
+  .kpi .rail{position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--brand)}
+  .kpi.scaling .rail{background:var(--brass)}
+
+  /* ---------- Body grid ---------- */
+  .grid{display:grid;grid-template-columns:288px 1fr;gap:16px;align-items:start}
+  .grid>*{min-width:0}
+  .main-col{min-width:0}
+  .panel{background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);min-width:0}
+  .panel-h{display:flex;align-items:center;justify-content:space-between;padding:13px 15px;border-bottom:1px solid var(--line)}
+  .panel-h h2{font-family:var(--serif);font-size:16px;font-weight:600;margin:0;letter-spacing:.01em}
+  .panel-h .count{font-family:var(--mono);font-size:11px;color:var(--faint)}
+
+  /* rail: add advertiser */
+  .rail-col{display:flex;flex-direction:column;gap:16px;position:sticky;top:76px}
+  .addbox{padding:13px 15px}
+  .addbox label{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);font-weight:600}
+  .addbox .row{display:flex;gap:7px;margin-top:8px}
+  .addbox input{flex:1;border:1px solid var(--line-2);border-radius:8px;padding:8px 10px;font-size:12.5px;outline:none;font-family:var(--mono)}
+  .addbox input:focus{border-color:var(--brand)}
+  .addbox .hint{font-size:11px;color:var(--faint);margin-top:7px;line-height:1.4}
+
+  .adv-list{max-height:none;overflow:visible;padding:6px}
+  .adv{display:block;width:100%;text-align:left;background:transparent;border:1px solid transparent;border-radius:9px;padding:10px 11px;transition:.12s}
+  .adv:hover{background:var(--surface-2);border-color:var(--line)}
+  .adv.active{background:var(--brand-soft);border-color:#bfd9d0}
+  .adv .top{display:flex;align-items:center;gap:8px}
+  .adv .dot{width:7px;height:7px;border-radius:50%;background:var(--active);flex:none}
+  .adv .nm{font-weight:600;font-size:13px;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .adv .co{font-size:11px;color:var(--faint);margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .adv .meta{margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--muted);flex:none}
+  .adv .chips{display:flex;flex-wrap:wrap;gap:4px;margin-top:7px}
+  .chip{font-size:10px;padding:2px 7px;border-radius:20px;background:var(--surface-3);color:var(--muted);font-weight:500;white-space:nowrap}
+
+  /* filters */
+  .filters{padding:11px 15px;display:flex;flex-direction:column;gap:10px}
+  .filters .fld label{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);font-weight:600;display:block;margin-bottom:5px}
+  .filters select{width:100%;border:1px solid var(--line-2);border-radius:8px;padding:7px 9px;font-size:12.5px;background:var(--surface);outline:none;color:var(--ink)}
+  .filters select:focus{border-color:var(--brand)}
+  .seg{display:flex;border:1px solid var(--line-2);border-radius:8px;overflow:hidden}
+  .seg button{flex:1;border:none;background:var(--surface);padding:7px 4px;font-size:12px;color:var(--muted);font-weight:500;border-right:1px solid var(--line)}
+  .seg button:last-child{border-right:none}
+  .seg button.on{background:var(--brand);color:#fff}
+
+  /* ---------- Case distribution ---------- */
+  .cases{padding:14px 16px}
+  .cases .row{display:grid;grid-template-columns:150px 1fr 70px;align-items:center;gap:12px;padding:5px 0}
+  .cases .cn{font-size:12.5px;font-weight:500;display:flex;align-items:center;gap:7px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .cases .swatch{width:9px;height:9px;border-radius:3px;flex:none}
+  .bar{height:9px;border-radius:5px;background:var(--surface-3);overflow:hidden}
+  .bar i{display:block;height:100%;border-radius:5px}
+  .cases .num{font-family:var(--mono);font-size:12px;text-align:right;color:var(--muted)}
+  .cases .num b{color:var(--ink)}
+
+  /* ---------- Table ---------- */
+  .tbl-h{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--line)}
+  .tbl-h .left{display:flex;align-items:center;gap:11px}
+  .tbl-h h2{font-family:var(--serif);font-size:17px;font-weight:600;margin:0}
+  .tbl-h .pill{font-family:var(--mono);font-size:11px;background:var(--surface-3);color:var(--muted);padding:3px 9px;border-radius:20px}
+  .tbl-scroll{overflow-x:auto}
+  table{width:100%;border-collapse:collapse;font-size:13px;min-width:1100px}
+  thead th{
+    position:sticky;top:0;background:var(--surface-2);text-align:left;
+    font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);
+    font-weight:600;padding:10px 12px;border-bottom:1px solid var(--line);white-space:nowrap;z-index:2;
+  }
+  thead th.sortable{cursor:pointer;user-select:none}
+  thead th.sortable:hover{color:var(--ink)}
+  thead th .arr{opacity:.5;font-size:9px}
+  tbody tr{border-bottom:1px solid var(--line);transition:.1s;cursor:pointer}
+  tbody tr:hover{background:var(--surface-2)}
+  tbody td{padding:11px 12px;vertical-align:top}
+  .rate{display:inline-flex;gap:1px}
+  .star{cursor:pointer;font-size:14px;line-height:1;color:#d3d8df}
+  .star.on{color:var(--brass)}
+  .adv-cell .nm{font-weight:600;font-size:13px}
+  .adv-cell .co{font-size:11px;color:var(--faint);margin-top:1px}
+  .case-tag{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:600;padding:3px 9px;border-radius:7px;white-space:nowrap}
+  .copy{max-width:280px;font-size:12.5px;color:#28323f;line-height:1.4}
+  .copy .more{color:var(--brand);font-weight:600;font-size:11px;cursor:pointer}
+  .cta{font-size:12px}
+  .cta .b{font-weight:600;display:inline-block;background:var(--surface-3);padding:1px 7px;border-radius:5px;font-size:11px}
+  .cta .lnk{display:block;color:var(--muted);font-family:var(--mono);font-size:11px;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:150px}
+  .thumb{width:48px;height:48px;border-radius:8px;flex:none;display:flex;align-items:center;justify-content:center;color:#fff;position:relative}
+  .thumb .ic{opacity:.92}
+  .thumb .mt{position:absolute;bottom:-6px;right:-6px;background:var(--ink);color:#fff;font-family:var(--mono);font-size:8px;padding:1px 4px;border-radius:5px;text-transform:uppercase;letter-spacing:.04em}
+  .plats{display:flex;gap:4px}
+  .plat{width:22px;height:22px;border-radius:6px;display:flex;align-items:center;justify-content:center;background:var(--surface-3)}
+  .date{font-family:var(--mono);font-size:11.5px;color:var(--muted);white-space:nowrap}
+  .status-tag{font-size:11px;font-weight:600;padding:3px 9px;border-radius:20px;white-space:nowrap;display:inline-flex;align-items:center;gap:5px}
+  .status-tag.active{background:#e3f3ec;color:#0c6f55}
+  .status-tag.inactive{background:#eef0f3;color:#717b8a}
+  .status-tag .d{width:6px;height:6px;border-radius:50%}
+  .status-tag.active .d{background:var(--active)}
+  .status-tag.inactive .d{background:var(--inactive)}
+  .scaling-badge{display:inline-flex;align-items:center;gap:6px;background:var(--brass-soft);color:#7d5410;font-weight:600;font-size:11px;padding:3px 8px;border-radius:7px;margin-top:6px}
+  .scaling-badge svg{display:block}
+  .new-flag{display:inline-block;background:var(--info);color:#fff;font-size:9px;font-weight:700;letter-spacing:.05em;padding:1px 5px;border-radius:4px;vertical-align:middle;margin-left:6px}
+  .snap{color:var(--brand);font-weight:600;font-size:12px;text-decoration:none;display:inline-flex;align-items:center;gap:4px}
+  .snap:hover{text-decoration:underline}
+  .empty{padding:60px 20px;text-align:center;color:var(--faint)}
+  .empty .big{font-family:var(--serif);font-size:18px;color:var(--muted);margin-bottom:6px}
+
+  /* ---------- Drawer ---------- */
+  .scrim{position:fixed;inset:0;background:rgba(14,23,38,.32);opacity:0;pointer-events:none;transition:.2s;z-index:60}
+  .scrim.on{opacity:1;pointer-events:auto}
+  .drawer{position:fixed;top:0;right:0;bottom:0;width:460px;max-width:94vw;background:var(--surface);box-shadow:var(--shadow-lg);transform:translateX(100%);transition:transform .24s cubic-bezier(.4,0,.2,1);z-index:61;display:flex;flex-direction:column}
+  .drawer.on{transform:translateX(0)}
+  .dr-h{padding:18px 20px;border-bottom:1px solid var(--line);display:flex;align-items:flex-start;gap:12px}
+  .dr-h .x{margin-left:auto;border:none;background:var(--surface-3);width:30px;height:30px;border-radius:8px;font-size:16px;color:var(--muted);flex:none}
+  .dr-h .x:hover{background:var(--line-2)}
+  .dr-body{overflow-y:auto;padding:18px 20px;flex:1}
+  .dr-creative{height:150px;border-radius:12px;display:flex;align-items:center;justify-content:center;color:#fff;margin-bottom:16px;position:relative;overflow:hidden}
+  .dr-creative .label{position:absolute;bottom:10px;left:12px;font-family:var(--mono);font-size:10.5px;background:rgba(0,0,0,.35);padding:3px 8px;border-radius:6px;letter-spacing:.05em}
+  .dr-row{display:flex;justify-content:space-between;gap:14px;padding:10px 0;border-bottom:1px solid var(--line);font-size:13px}
+  .dr-row .k{color:var(--faint);font-size:11px;letter-spacing:.06em;text-transform:uppercase;font-weight:600;flex:none}
+  .dr-row .v{text-align:right;font-weight:500}
+  .dr-copy{background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:13px 14px;font-size:13.5px;line-height:1.5;margin:14px 0;color:#28323f}
+  .dr-actions{padding:14px 20px;border-top:1px solid var(--line);display:flex;gap:8px}
+  .dr-actions .btn{flex:1;justify-content:center}
+
+  .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--ink);color:#fff;padding:11px 18px;border-radius:10px;font-size:13px;box-shadow:var(--shadow-lg);opacity:0;pointer-events:none;transition:.22s;z-index:80;max-width:90vw}
+  .toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+
+  @media (max-width:1080px){
+    .kpis{grid-template-columns:repeat(2,1fr)}
+    .grid{grid-template-columns:1fr}
+    .rail-col{position:static}
+  }
+  @media (max-width:760px){
+    body{overflow-x:hidden}
+    .topbar{flex-wrap:wrap;height:auto;min-height:56px;padding:10px 14px;gap:10px 12px}
+    .brand{padding-right:12px}
+    .brand .tag{display:none}
+    .sync{font-size:11.5px;order:2}
+    .spacer{display:none}
+    .tb-search{order:5;flex:1 1 100%}
+    .tb-search input{width:100%}
+    #syncBtn{order:4;margin-left:auto}
+    .kpis{grid-template-columns:1fr 1fr;gap:10px}
+    .wrap{padding:14px 14px 36px}
+    .cases .row{grid-template-columns:118px 1fr 58px;gap:8px}
+    .cases .cn{font-size:11.5px}
+    .drawer{width:100%}
+  }
+  @media (max-width:430px){ .kpis{grid-template-columns:1fr} }
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="brand">
+      <span class="mark">Arbiter<b>.</b></span>
+      <span class="tag">Tort Ad Desk</span>
+    </div>
+    <div class="sync">
+      <span class="pulse-dot"></span>
+      <span>Synced <b id="syncAgo">just now</b> · next in <b id="syncNext">3h 00m</b></span>
+    </div>
+    <div class="spacer"></div>
+    <div class="tb-search">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+      <input id="search" placeholder="Search copy or advertiser…" />
+    </div>
+    <button class="btn primary" id="syncBtn">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 3v6h-6"/></svg>
+      Sync all now
+    </button>
+  </div>
+
+  <div class="wrap">
+    <div class="kpis" id="kpis"></div>
+
+    <div class="grid">
+      <!-- LEFT RAIL -->
+      <div class="rail-col">
+        <div class="panel">
+          <div class="addbox">
+            <label>Track an advertiser</label>
+            <div class="row">
+              <input id="addUrl" placeholder="Paste Ad Library URL…" />
+              <button class="btn primary sm" id="addBtn">Add</button>
+            </div>
+            <div class="hint">Paste any <span class="mono">facebook.com/ads/library</span> page or advertiser URL. The scraper picks it up on the next 3-hour sync.</div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-h"><h2>Advertisers</h2><span class="count" id="advCount"></span></div>
+          <div class="adv-list" id="advList"></div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-h"><h2>Filters</h2><button class="btn sm" id="clearFilters">Reset</button></div>
+          <div class="filters">
+            <div class="fld">
+              <label>Case type</label>
+              <select id="fCase"><option value="">All case types</option></select>
+            </div>
+            <div class="fld">
+              <label>Platform</label>
+              <select id="fPlatform">
+                <option value="">All platforms</option>
+                <option value="facebook">Facebook</option>
+                <option value="instagram">Instagram</option>
+                <option value="messenger">Messenger</option>
+                <option value="audience_network">Audience Network</option>
+              </select>
+            </div>
+            <div class="fld">
+              <label>Status</label>
+              <div class="seg" id="segStatus">
+                <button data-v="" class="on">All</button>
+                <button data-v="ACTIVE">Active</button>
+                <button data-v="INACTIVE">Inactive</button>
+              </div>
+            </div>
+            <div class="fld">
+              <label>Show</label>
+              <div class="seg" id="segScope">
+                <button data-v="all" class="on">All ads</button>
+                <button data-v="scaling">Scaling only</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- MAIN -->
+      <div class="main-col" style="display:flex;flex-direction:column;gap:16px">
+        <div class="panel">
+          <div class="panel-h"><h2>Case mix · share of active ads</h2><span class="count" id="caseTotal"></span></div>
+          <div class="cases" id="caseDist"></div>
+        </div>
+
+        <div class="panel">
+          <div class="tbl-h">
+            <div class="left">
+              <h2>Ads</h2>
+              <span class="pill" id="adsCount">0</span>
+            </div>
+            <div style="display:flex;gap:8px">
+              <button class="btn sm" id="exportCsv">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0 4-4m-4 4-4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+                CSV
+              </button>
+              <button class="btn sm" id="exportXlsx">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0 4-4m-4 4-4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+                XLSX
+              </button>
+            </div>
+          </div>
+          <div class="tbl-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th class="sortable" data-sort="rating">Rate</th>
+                  <th class="sortable" data-sort="advertiser">Advertiser</th>
+                  <th class="sortable" data-sort="case_type">Case type</th>
+                  <th>Ad copy</th>
+                  <th>CTA / Landing</th>
+                  <th>Media</th>
+                  <th>Platforms</th>
+                  <th class="sortable" data-sort="start">Start</th>
+                  <th class="sortable" data-sort="end">End</th>
+                  <th class="sortable" data-sort="status">Status</th>
+                  <th>Snapshot</th>
+                </tr>
+              </thead>
+              <tbody id="tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="scrim" id="scrim"></div>
+  <aside class="drawer" id="drawer"></aside>
+  <div class="toast" id="toast"></div>
+
+<script>
+/* ============================ DATA ============================ */
+const DATA = {"generated_at":"2026-06-10T14:00:00Z","source":"sample","next_sync_at":"2026-06-10T17:00:00Z","country":"US","advertisers":[{"page_id":"968502205158963","page_name":"Sokolove Law","company":"Sokolove Law, LLC","active_ads":8,"total_ads":9,"case_types":["Camp Lejeune Water","Hernia Mesh","Ozempic / GLP-1","Paraquat","Social Media Harm","Talcum Powder"],"first_seen":"2026-03-25T23:00:00Z","library_url":"https://www.facebook.com/ads/library/?active_status=all&ad_type=all&country=US&view_all_page_id=968502205158963"},{"page_id":"876870956881750","page_name":"Morgan & Morgan","company":"Morgan & Morgan, P.A.","active_ads":3,"total_ads":5,"case_types":["AFFF Firefighting Foam","Camp Lejeune Water","Ozempic / GLP-1"],"first_seen":"2026-03-22T18:00:00Z","library_url":"https://www.facebook.com/ads/library/?active_status=all&ad_type=all&country=US&view_all_page_id=876870956881750"},{"page_id":"554515916472119","page_name":"TorHoerman Law","company":"TorHoerman Law, LLC","active_ads":6,"total_ads":11,"case_types":["Depo-Provera","Hair Relaxer","Paraquat","Social Media Harm","Talcum Powder"],"first_seen":"2026-03-13T21:00:00Z","library_url":"https://www.facebook.com/ads/library/?active_status=all&ad_type=all&country=US&view_all_page_id=554515916472119"},{"page_id":"322143275284566","page_name":"Legal Injury Advocates","company":"Legal Injury Advocates","active_ads":5,"total_ads":5,"case_types":["AFFF Firefighting Foam","Camp Lejeune Water","Depo-Provera","Rideshare Assault"],"first_seen":"2026-03-18T03:00:00Z","library_url":"https://www.facebook.com/ads/library/?active_status=all&ad_type=all&country=US&view_all_page_id=322143275284566"},{"page_id":"642104049154778","page_name":"Weitz & Luxenberg","company":"Weitz & Luxenberg P.C.","active_ads":6,"total_ads":9,"case_types":["AFFF Firefighting Foam","Depo-Provera","Roundup / NHL","Talcum Powder"],"first_seen":"2026-03-08T18:00:00Z","library_url":"https://www.facebook.com/ads/library/?active_status=all&ad_type=all&country=US&view_all_page_id=642104049154778"},{"page_id":"929508614103464","page_name":"The Carlson Law Firm","company":"The Carlson Law Firm, P.C.","active_ads":2,"total_ads":6,"case_types":["Depo-Provera","Hernia Mesh","Paraquat","Rideshare Assault"],"first_seen":"2026-03-20T07:00:00Z","library_url":"https://www.facebook.com/ads/library/?active_status=all&ad_type=all&country=US&view_all_page_id=929508614103464"},{"page_id":"723388065622885","page_name":"Riverside Legal Group","company":"Riverside Legal Group LLC","active_ads":4,"total_ads":5,"case_types":["Hair Relaxer","Ozempic / GLP-1","Rideshare Assault"],"first_seen":"2026-03-21T18:00:00Z","library_url":"https://www.facebook.com/ads/library/?active_status=all&ad_type=all&country=US&view_all_page_id=723388065622885"},{"page_id":"12492216911984","page_name":"National Injury Help","company":"National Injury Help LLC","active_ads":6,"total_ads":8,"case_types":["AFFF Firefighting Foam","Hernia Mesh","Ozempic / GLP-1","Paraquat","Social Media Harm"],"first_seen":"2026-03-27T12:00:00Z","library_url":"https://www.facebook.com/ads/library/?active_status=all&ad_type=all&country=US&view_all_page_id=12492216911984"},{"page_id":"490664180550853","page_name":"Beacon Claims Center","company":"Beacon Claims Center","active_ads":5,"total_ads":7,"case_types":["AFFF Firefighting Foam","Depo-Provera","Hair Relaxer","Ozempic / GLP-1","Talcum Powder"],"first_seen":"2026-03-12T18:00:00Z","library_url":"https://www.facebook.com/ads/library/?active_status=all&ad_type=all&country=US&view_all_page_id=490664180550853"},{"page_id":"95199612424035","page_name":"Atlas Tort Partners","company":"Atlas Tort Partners LLP","active_ads":8,"total_ads":11,"case_types":["Camp Lejeune Water","Hair Relaxer","Ozempic / GLP-1","Paraquat","Roundup / NHL","Social Media Harm"],"first_seen":"2026-03-14T10:00:00Z","library_url":"https://www.facebook.com/ads/library/?active_status=all&ad_type=all&country=US&view_all_page_id=95199612424035"}],"cases":[{"case_type":"Camp Lejeune Water","case_key":"lejeune"},{"case_type":"Talcum Powder","case_key":"talc"},{"case_type":"Roundup / NHL","case_key":"roundup"},{"case_type":"AFFF Firefighting Foam","case_key":"afff"},{"case_type":"Hernia Mesh","case_key":"mesh"},{"case_type":"Social Media Harm","case_key":"social"},{"case_type":"Ozempic / GLP-1","case_key":"ozempic"},{"case_type":"Paraquat","case_key":"paraquat"},{"case_type":"Rideshare Assault","case_key":"rideshare"},{"case_type":"Depo-Provera","case_key":"depo"},{"case_type":"Hair Relaxer","case_key":"relaxer"}],"ads":[{"id":"100000003602038","page_id":"968502205158963","advertiser":"Sokolove Law","company":"Sokolove Law, LLC","case_type":"Ozempic / GLP-1","case_key":"ozempic","ad_copy":"Ozempic lawsuit claims are being accepted. Find out if you qualify.","cta_text":"Learn More","link_caption":"sokolovelaw.com","landing_url":"https://sokolovelaw.com/claim?utm_source=fb","media_type":"video","platforms":["facebook"],"start":"2026-04-03T11:00:00Z","end":null,"status":"ACTIVE","snapshot_url":"https://www.facebook.com/ads/library/?id=100000003602038","duplicate_group":"3d8069999034","duplicate_count":8,"rating":0,"first_seen":"2026-04-03T11:00:00Z","last_seen":"2026-06-10T11:00:00Z"},{"id":"100000004639911","page_id":"968502205158963","advertiser":"Sokolove Law","company":"Sokolove Law, LLC","case_type":"Talcum Powder","case_key":"talc","ad_copy":"Used talcum powder and later diagnosed with ovarian cancer? You may have a case.","cta_text":"Contact Us","link_caption":"sokolovelaw.com","landing_url":"https://sokolovelaw.com/claim?utm_source=fb","media_type":"image","platforms":["facebook","instagram","audience_network"],"start":"2026-06-02T20:00:00Z","end":null,"status":"ACTIVE","snapshot_url":"https://www.facebook.com/ads/library/?id=100000004639911","duplicate_group":"e2dc12103200","duplicate_count":2,"rating":0,"first_seen":"2026-06-02T20:00:00Z","last_seen":"2026-06-10T11:00:00Z"},{"id":"100000007671997","page_id":"968502205158963","advertiser":"Sokolove Law","company":"Sokolove Law, LLC","case_type":"Talcum Powder","case_key":"talc","ad_copy":"Used talcum powder and later diagnosed with ovarian cancer? You may have a case.","cta_text":"Contact Us","link_caption":"sokolovelaw.com","landing_url":"https://sokolovelaw.com/claim?utm_source=fb","media_type":"video","platforms":["facebook","instagram"],"start":"2026-05-04T01:00:00Z","end":null,"status":"ACTIVE","snapshot_url":"https://www.facebook.com/ads/library/?id=100000007671997","duplicate_group":"e2dc12103200","duplicate_count":1,"rating":0,"first_seen":"2026-05-04T01:00:00Z","last_seen":"2026-06-10T10:00:00Z"},{"id":"100000016592783","page_id":"968502205158963","advertiser":"Sokolove Law","company":"Sokolove Law, LLC","case_type":"Hernia Mesh","case_key":"mesh","ad_copy":"Hernia mesh complications? Revision surgery may entitle you to compensation.","cta_text":"Contact Us","link_caption":"sokolovelaw.com","landing_url":"https://sokolovelaw.com/claim?utm_source=fb","media_type":"image","platforms":["instagram"],"start":"2026-06-01T20:00:00Z","end":null,"status":"ACTIVE","snapshot_url":"https://www.facebook.com/ads/library/?id=100000016592783","duplicate_group":"77b6f2911006","duplicate_count":1,"rating":0,"first_seen":"2026-06-01T20:00:00Z","last_seen":"2026-06-10T12:00:00Z"},{"id":"100000022355349","page_id":"968502205158963","advertiser":"Sokolove Law","company":"Sokolove Law, LLC","case_type":"Paraquat","case_key":"paraquat","ad_copy":"Farmers and agricultural workers may qualify for a Paraquat claim.","cta_text":"Get Offer","link_caption":"sokolovelaw.com","landing_url":"https://sokolovelaw.com/claim?utm_source=fb","media_type":"image","platforms":["facebook","instagram"],"start":"2026-05-17T16:00:00Z","end":"2026-05-25T16:00:00Z","status":"INACTIVE","snapshot_url":"https://www.facebook.com/ads/library/?id=100000022355349","duplicate_group":"f1f1029f9daa","duplicate_count":1,"rating":0,"first_seen":"2026-05-17T16:00:00Z","last_seen":"2026-06-10T12:00:00Z"},{"id":"100000023657605","page_id":"968502205158963","advertiser":"Sokolove Law","company":"Sokolove Law, LLC","case_type":"Camp Lejeune Water","case_key":"lejeune","ad_copy":"Stationed at Camp Lejeune between 1953 and 1987? You may be owed compensation.","cta_text":"Contact Us","link_caption":"sokolovelaw.com","landing_url":"https://sokolovelaw.com/claim?utm_source=fb","media_type":"video","platforms":["facebook","instagram","audience_network"],"start":"2026-05-20T04:00:00Z","end":null,"status":"ACTIVE","snapshot_url":"https://www.facebook.com/ads/library/?id=100000023657605","duplicate_group":"b623aad1f509","duplicate_count":1,"rating":0,"first_seen":"2026-05-20T04:00:00Z","last_seen":"2026-06-10T10:00:00Z"},{"id":"100000025227886","page_id":"968502205158963","advertiser":"Sokolove Law","company":"Sokolove Law, LLC","case_type":"Social Media Harm","case_key":"social","ad_copy":"Social media addiction lawsuits on behalf of minors now being reviewed.","cta_text":"Get Quote","link_caption":"sokolovelaw.com","landing_url":"https://sokolovelaw.com/claim?utm_source=fb","media_type":"video","platforms":["facebook","instagram","messenger"],"start":"2026-03-25T23:00:00Z","end":null,"status":"ACTIVE","snapshot_url":"https://www.facebook.com/ads/library/?id=100000025227886","duplicate_group":"f34edd85a8b2","duplicate_count":1,"rating":3,"first_seen":"2026-03-25T23:00:00Z","last_seen":"2026-06-10T11:00:00Z"},{"id":"100000031700393","page_id":"968502205158963","advertiser":"Sokolove Law","company":"Sokolove Law, LLC","case_type":"Camp Lejeune Water","case_key":"lejeune","ad_copy":"Stationed at Camp Lejeune between 1953 and 1987? You may be owed compensation.","cta_text":"Get Quote","link_caption":"sokolovelaw.com","landing_url":"https://sokolovelaw.com/claim?utm_source=fb","media_type":"video","platforms":["instagram"],"start":"2026-05-01T18:00:00Z","end":null,"status":"ACTIVE","snapshot_url":"https://www.facebook.com/ads/library/?id=100000031700393","duplicate_group":"b623aad1f509","duplicate_count":1,"rating":2,"first_seen":"2026-05-01T18:00:00Z","last_seen":"2026-06-10T12:00:00Z"},{"id":"100000035854681","page_id":"968502205158963","advertiser":"Sokolove Law","company":"Sokolove Law, LLC","case_type":"Paraquat","case_key":"paraquat","ad_copy":"Farmers and agricultural workers may qualify for a Paraquat claim.","cta_text":"Sign Up","link_caption":"sokolovelaw.com","landing_url":"https://sokolovelaw.com/claim?utm_source=fb","media_type":"image","platforms":["facebook","instagram","messenger","audience_network"],"start":"2026-05-26T23:00:00Z","end":null,"status":"ACTIVE","snapshot_url":"https://www.facebook.com/ads/library/?id=100000035854681","duplicate_group":"f1f1029f9daa","duplicate_count":1,"rating":0,"first_seen":"2026-05-26T23:00:00Z","last_seen":"2026-06-10T11:00:00Z"},{"id":"100000042237427","page_id":"876870956881750","advertiser":"Morgan & Morgan","company":"Morgan & Morgan, P.A.","case_type":"Camp Lejeune Water","case_key":"lejeune","ad_copy":"New federal law lets Camp Lejeune victims file. Find out if you qualify in 30 seconds.","cta_text":"Get Offer","link_caption":"morganandmorga.com","landing_url":"https://morganandmorga.com/claim?utm_source=fb","media_type":"video","platforms":["facebook","instagram"],"start":"2026-04-15T21:00:00Z","end":null,"status":"ACTIVE","snapshot_url":"https://www.facebook.com/ads/library/?id=100000042237427","duplicate_group":"2c3403aae61b","duplicate_count":14,"rating":3,"first_seen":"2026-04-15T21:00:00Z","last_seen":"2026-06-10T13:00:00Z"},{"id":"100000044681472","page_id":"876870956881750","advertiser":"Morgan & Morgan","company":"Morgan & Morgan, P.A.","case_type":"AFFF Firefighting Foam","case_key":"afff","ad_copy":"Firefighters exposed to AFFF foam may be eligible for compensation.","cta_text":"Get Quote","link_caption":"morganandmorga.com","landing_url":"https://morganandmorga.com/claim?utm_source=fb","media_type":"image","platforms":["facebook","instagram"],"start":"2026-06-08T23:00:00Z","end":"2026-06-22T23:00:00Z","status":"INACTIVE","snapshot_url":"https://www.facebook.com/ads/library/?id=100000044681472","duplicate_group":"a39b6a4332bc","duplicate_count":1,"rating":0,"first_seen":"2026-06-08T23:00:00Z","last_seen":"2026-06-10T12:00:00Z"},{"id":"100000051264498","page_id":"876870956881750","advertiser":"Morgan & Morgan","company":"Morgan & Morgan, P.A.","case_type":"Ozempic / GLP-1","case_key":"ozempic","ad_copy":"Severe stomach problems after Ozempic or Wegovy? You may be entitled to compensation.","cta_text":"Get Quote","link_caption":"morganandmorga.com","landing_url":"https://morganandmorga.com/claim?utm_source=fb","media_type":"video","platforms":["facebook","instagram","messenger","audience_network"],"start":"2026-03-22T18:00:00Z","end":"2026-03-28T18:00:00Z","status":"INACTIVE","snapshot_url":"https://www.facebook.com/ads/library/?id=100000051264498","duplicate_group":"45348ed966cb","duplicate_count":8,"rating":0,"first_seen":"2026-03-22T18:00:00Z","last_seen":"2026-06-10T11:00:00Z"},{"id":"100000052982143","page_id":"876870956881750","advertiser":"Morgan & Morgan","company":"Morgan & Morgan, P.A.","case_type":"Camp Lejeune Water","case_key":"lejeune","ad_copy":"Stationed at Camp Lejeune between 1953 and 1987? You may be owed compensation.","cta_text":"Sign Up","link_caption":"morganandmorga.com","landing_url":"https://morganandmorga.com/claim?utm_source=fb","media_type":"image","platforms":["facebook"],"start":"2026-05-15T00:00:00Z","end":null,"status":"ACTIVE","snapshot_url":"https://www.facebook.com/ads/library/?id=100000052982143","duplicate_group":"2106d37f008a","duplicate_count":2,"rating":0,"first_seen":"2026-05-15T00:00:00Z","last_seen":"2026-06-10T13:00:00Z"},{"id":"100000059091792","page_id":"876870956881750","advertiser":"Morgan & Morgan","company":"Morgan & Morgan, P.A.","case_type":"Ozempic / GLP-1","case_key":"ozempic","ad_copy":"Ozempic lawsuit claims are being accepted. Find out if you qualify.","cta_text":"Learn More","link_caption":"morganandmorga.com","landing_url":"https://morganandmorga.com/claim?utm_source=fb","media_type":"image","platforms":["facebook"],"start":"2026-05-14T19:00:00Z","end":null,"status":"ACTIVE","snapshot_url":"https://www.facebook.com/ads/library/?id=100000059091792","duplicate_group":"bac12890dfb6","duplicate_count":14,"rating":0,"first_seen":"2026-05-14T19:00:00Z","last_seen":"2026-06-10T14:00:00Z"},{"id":"100000067121736","page_id":"554515916472119","advertiser":"TorHoerman Law","company":"TorHoerman Law, LLC","case_type":"Paraquat","case_key":"paraquat","ad_copy":"Farmers and agricultural workers may qualify for a Paraquat claim.","cta_text":"Apply Now","link_caption":"torhoermanlaw.com","landing_url":"https://torhoermanlaw.com/claim?utm_source=fb","media_type":"image","platforms":["facebook","instagram","messenger"],"start":"2026-05-31T10:00:00Z","end":null,"status":"ACTIVE","snapshot_url":"https://www.facebook.com/ads/library/?id=100000067121736","duplicate_group":"74011c815e19","duplicate_count":3,"rating":1,"first_seen":"2026-05-31T10:00:00Z","last_seen":"2026-06-10T13:00:00Z"},{"id":"100000068648640","page_id":"554515916472119","advertiser":"TorHoerman Law","company":"TorHoerman Law, LLC","case_type":"Social Media Harm","case_key":"social","ad_copy":"If a child in your family was harmed by social media, you may have a claim.","cta_text":"Get Offer","link_caption":"torhoermanlaw.com","landing_url":"https://torhoermanlaw.com/claim?utm_source=fb","media_type":"image","platforms":["facebook","instagram"],"start":"2026-03-13T21:00:00Z","end":"2026-04-18T21:00:00Z","status":"INACTIVE","snapshot_url":"https://www.facebook.com/ads/library/?id=100000068648640","duplicate_group":"788cf4f641ea","duplicate_count":14,"rating":0,"first_seen":"2026-03-13T21:00:00Z","last_seen":"2026-06-10T12:00:00Z"},{"id":"100000071922648","page_id":"554515916472119","advertiser":"TorHoerman Law","company":"TorHoerman Law, LLC","case_type":"Social Media Harm","case_key":"social","ad_copy":"Social media addiction lawsuits on behalf of minors now being reviewed.","cta_text":"Sign Up","link_caption":"torhoermanlaw.com","landing_url":"https://torhoermanlaw.com/claim?utm_source=fb","media_type":"image","platforms":["facebook","instagram","messenger","audience_network"],"start":"2026-04-01T22:00:00Z","end":null,"status":"ACTIVE","snapshot_url":"https://www.facebook.com/ads/library/?id=100000071922648","duplicate_group":"b1782eb94a7e","duplicate_count":2,"rating":1,"first_seen":"2026-04-01T22:00:00Z","last_seen":"2026-06-10T11:00:00Z"},{"id":"100000079845522","page_id":"554515916472119","advertiser":"TorHoerman Law","company":"TorHoerman Law, LLC","case_type":"Social Media Harm","case_key":"social","ad_copy":"Did your teen suffer harm from Instagram or TikTok? Parents are taking action.","cta_text":"Contact Us","link_caption":"torhoermanlaw.com","landing_url":"https://torhoermanlaw.com/claim?utm_source=fb","media_type":"video","platforms":["facebook","instagram","audience_network"],"start":"2026-04-25T15:00:00Z","end":null,"status":"ACTIVE","snapshot_url":"https://www.facebook.com/ads/library/?id=100000079845522","duplicate_group":"5393506263cb","duplicate_count":3,"rating":0,"first_seen":"2026-04-25T15:00:00Z","last_seen":"2026-06-10T09:00:00Z"},{"id":"100000085511817","page_id":"554515916472119","advertiser":"TorHoerman Law","company":"TorHoerman Law, LLC","case_type":"Hair Relaxer","case_key":"relaxer","ad_copy":"Used hair straightener products and later diagnosed with cancer?","cta_text":"Get Quote","link_caption":"torhoermanlaw.com","landing_url":"https://torhoermanlaw.com/claim?utm_source=fb","media_type":"image","platforms":["facebook","instagram","messenger"],"start":"2026-04-25T12:00:00Z","end":null,"status":"ACTIVE","snapshot_url":"https://www.facebook.com/ads/library/?id=100000085511817","duplicate_group":"a87c1e5a0c15","duplicate_count":1,"rating":0,"first_seen":"2026-04-25T12:00:00Z","last_seen":"2026-06-10T10:00:00Z"},{"id":"100000088855842","page_id":"554515916472119","advertiser":"TorHoerman Law","company":"TorHoerman Law, LLC","case_type":"Depo-Provera","case_key":"depo","ad_copy":"Diagnosed with a brain tumor after Depo-Provera injections? You may have a case.","cta_text":"Apply Now","link_caption":"torhoermanlaw.com","landing_url":"https://torhoermanlaw.com/claim?utm_source=fb","media_type":"video","platforms":["instagram"],"start":"2026-04-26T18:00:00Z","end":null,"status":"ACTIVE","snapshot_url":"https://www.facebook.com/ads/library/?id=100000088855842","duplicate_group":"0bc50a86219d","duplicate_count":8,"rating":0,"first_seen":"2026-04-26T18:00:00Z","last_seen":"2026-06-10T13:00:00Z"},{"id":"100000090987193","page_id":"554515916472119","advertiser":"TorHoerman Law","company":"TorHoerman Law, LLC","case_type":"Hair Relaxer","case_key":"relaxer","ad_copy":"Chemical hair relaxer linked to uterine cancer. See if you qualify.","cta_text":"Get Quote","link_caption":"torhoermanlaw.com","landing_url":"https://torhoermanlaw.com/claim?utm_source=fb","media_type":"image","platforms":["facebook","instagram","audience_network"],"start":"2026-04-12T02:00:00Z","end":"2026-04-20T02:00:00Z","status":"INACTIVE","snapshot_url":"https://www.facebook.com/ads/library/?id=100000090987193","duplicate_group":"7059f40762e5","duplicate_count":1,"rating":0,"first_seen":"2026-04-12T02:00:00Z","last_seen":"2026-06-10T10:00:00Z"},{"id":"100000092711422","page_id":"554515916472119","advertiser":"TorHoerman Law","company":"TorHoerman Law, LLC","case_type":"Hair Relaxer","case_key":"relaxer","ad_copy":"Chemical hair relaxer linked to uterine cancer. See if you qualify.","cta_text":"Contact Us","link_caption":"torhoermanlaw.com","landing_url":"https://torhoermanlaw.com/claim?utm_source=fb","media_type":"image","platforms":["facebook","instagram","messenger","audience_network"],"start":"2026-04-10T17:00:00Z","end":"2026-04-22T17:00:00Z","status":"INACTIVE","snapshot_url":"https://www.facebook.com/ads/library/?id=100000092711422","duplicate_group":"7059f40762e5","duplicate_count":1,"rating":0,"first_seen":"2026-04-10T17:00:00Z","last_seen":"2026-06-10T13:00:00Z"},{"id":"100000099741287","page_id":"554515916472119","advertiser":"TorHoerman Law","company":"TorHoerman Law, LLC","case_type":"Social Media Harm","case_key":"social","ad_copy":"Did your teen suffer harm from Instagram or TikTok? Parents are taking action.","cta_text":"Learn More","link_caption":"torhoermanlaw.com","landing_url":"https://torhoermanlaw.com/claim?utm_source=fb","media_type":"image","platforms":["facebook","instagram","messenger"],"start":"2026-05-14T05:00:00Z","end":null,"status":"ACTIVE","snapshot_url":"https://www.facebook.com/ads/library/?id=100000099741287","duplicate_group":"5393506263cb","duplicate_count":1,"rating":1,"first_seen":"2026-05-14T05:00:00Z","last_seen":"2026-06-10T14:00:00Z"},{"id":"100000108524271","page_id":"554515916472119","advertiser":"TorHoerman Law","company":"TorHoerman Law, LLC","case_type":"Social Media Harm","case_key":"social","ad_copy":"Social media addiction lawsuits on behalf of minors now being reviewed.","cta_text":"Get Quote","link_caption":"torhoermanlaw.com","landing_url":"https://torhoermanlaw.com/claim?utm_source=fb","media_type":"image","platforms":["facebook","instagram","messenger","audience_network"],"start":"2026-04-05T01:00:00Z","end":"2026-05-10T01:00:00Z","status":"INACTIVE","snapshot_url":"https://www.facebook.com/ads/library/?id=100000108524271","duplicate_group":"b1782eb94a7e","duplicate_count":1,"rating":0,"first_seen":"2026-04-05T01:00:00Z","last_seen":"2026-06-10T11:00:00Z"},{"id":"100000117220720","page_id":"554515916472119","advertiser":"TorHoerman Law","company":"TorHoerman Law, LLC","case_type":"Talcum Powder","case_key":"talc","ad_copy":"Used talcum powder and later diagnosed with ovarian cancer? You may have a case.","cta_text":"Sign Up","link_caption":"torhoermanlaw.com","landing_url":"https://torhoermanlaw.com/claim?utm_source=fb","media_type":"video","platforms":["facebook","instagram"],"start":"2026-04-10T19:00:00Z","end":"2026-05-18T19:00:00Z","status":"INACTIVE","snapshot_url":"https://www.facebook.com/ads/library/?id=100000117220720","duplicate_group":"350ab7c545b8","duplicate_count":1,"rating":0,"first_seen":"2026-04-10T19:00:00Z","last_seen":"2026-06-10T11:00:00Z"},{"id":"100000118283873","page_id":"322143275284566","advertiser":"Legal Injury Advocates","company":"Legal Injury Advocates","case_type":"Camp Lejeune Water","case_key":"lejeune","ad_copy":"Stationed at Camp Lejeune between 1953 and 1987? You may be owed compensation.","cta_text":"Sign Up","link_caption":"legalinjuryadv.com","landing_url":"https://legalinjuryadv.com/claim?utm_source=fb","media_type":"video","platforms":["facebook","instagram","messenger"],"start":"2026-06-05T11:00:00Z","end":null,"status":"ACTIVE","snapshot_url":"https://www.facebook.com/ads/library/?id=100000118283873","duplicate_group":"88f6b76bfd4e","duplicate_count":3,"rating":0,"first_seen":"2026-06-05T11:00:00Z","last_seen":"2026-06-10T10:00:00Z"},{"id":"100000122438848","page_id":"322143275284566","advertiser":"Legal Injury Advocates","company":"Legal Injury Advocates","case_type":"Depo-Provera","case_key":"depo","ad_copy":"If you used Depo-Provera and developed a tumor, you may qualify.","cta_text":"Sign Up","link_caption":"legalinjuryadv.com","landing_url":"https://legalinjuryadv.com/claim?utm_source=fb","media_type":"video","platforms":["instagram"],"start":"2026-05-06T00:00:00Z","end":null,"status":"ACTIVE","snapshot_url":"https://www.facebook.com/ads/library/?id=100000122438848","duplicate_group":"ef2d0058c4f7","duplicate_count":1,"rating":0,"first_seen":"2026-05-06T00:00:00Z","last_seen":"2026-06-10T12:00:00Z"},{"id":"100000129625179","page_id":"322143275284566","advertiser":"Legal Injury Advocates","company":"Legal Injury Advocates","case_type":"AFFF Firefighting Foam","case_key":"afff","ad_copy":"PFAS 'forever chemicals' in firefighting foam linked to kidney and testicular cancer.","cta_text":"Sign Up","link_caption":"legalinjuryadv.com","landing_url":"https://legalinjuryadv.com/claim?utm_source=fb","media_type":"video","platforms":["facebook","instagram","audience_network"],"start":"2026-05-26T02:00:00Z","end":null,"status":"ACTIVE","snapshot_url":"https://www.facebook.com/ads/library/?id=100000129625179","duplicate_group":"768fb3371108","duplicate_count":2,"rating":0,"first_seen":"2026-05-26T02:00:00Z","last_seen":"2026-06-10T09:00:00Z"},{"id":"100000133309252","page_id":"322143275284566","advertiser":"Legal Injury Advocates","company":"Legal Injury Advocates","case_type":"Camp Lejeune Water","case_key":"lejeune","ad_copy":"Stationed at Camp Lejeune between 1953 and 1987? You may be owed compensation.","cta_text":"Get Quote","link_caption":"legalinjuryadv.com","landing_url":"https://legalinjuryadv.com/claim?utm_source=fb","media_type":"image","platforms":["instagram"],"start":"2026-03-18T03:00:00Z","end":null,"status":"ACTIVE","snapshot_url":"https://www.facebook.com/ads/library/?id=100000133309252","duplicate_group":"88f6b76bfd4e","duplicate_count":14,"rating":0,"first_seen":"2026-03-18T03:00:00Z","last_seen":"2026-06-10T14:00:00Z"},{"id":"100000136593303","page_id":"322143275284566","advertiser":"Legal Injury Advocates","company":"Legal Injury Advocates","case_type":"Rideshare Assault","case_key":"rideshare","ad_copy":"Assaulted during an Uber or Lyft ride? Confidential legal help is available.","cta_text":"Get Quote","link_caption":"legalinjuryadv.com","landing_url":"https://legalinjuryadv.com/claim?utm_source=fb","media_type":"video","platforms":["facebook","instagram"],"start":"2026-05-20T16:00:00Z","end":null,"status":"ACTIVE","snapshot_url":"https://www.facebook.com/ads/library/?id=100000136593303","duplicate_group":"f8a124010ba8","duplicate_count":1,"rating":0,"first_seen":"2026-05-20T16:00:00Z","last_seen":"2026-06-10T14:00:00Z"},{"id":"100000137671924","page_id":"642104049154778","advertiser":"Weitz & Luxenberg","company":"Weitz & Luxenberg P.C.","case_type":"AFFF Firefighting Foam","case_key":"afff","ad_copy":"PFAS 'forever chemicals' in firefighting foam linked to kidney and testicular cancer.","cta_text":"Apply Now","link_caption":"weitzandluxenb.com","landing_url":"https://weitzandluxenb.com/claim?utm_source=fb","media_type":"image","platforms":["instagram"],"start":"2026-06-08T02:00:00Z","end":null,"status":"ACTIVE","snapshot_url":"https://www.facebook.com/ads/library/?id=100000137671924","duplicate_group":"0204f1447ba9","duplicate_count":1,"rating":0,"first_seen":"2026-06-08T02:00:00Z","last_seen":"2026-06-10T13:00:00Z"},{"id":"100000142010664","page_id":"642104049154778","advertiser":"Weitz & Luxenberg","company":"Weitz & Luxenberg P.C.","case_type":"Talcum Powder","case_key":"talc","ad_copy":"Used talcum powder and later diagnosed with ovarian cancer? You may have a case.","cta_text":"Get Offer","link_caption":"weitzandluxenb.com","landing_url":"https://weitzandluxenb.com/claim?utm_source=fb","media_type":"image","platforms":["facebook","instagram","messenger"],"start":"2026-06-05T09:00:00Z","end":null,"status":"ACTIVE","snapshot_url":"https://www.facebook.com/ads/library/?id=100000142010664","duplicate_group":"93bf0d96fcb7","duplicate_count":5,"rating":0,"first_seen":"2026-06-05T09:00:00Z","last_seen":"2026-06-10T10:00:00Z"},{"id":"100000143225571","page_id":"642104049154778","advertiser":"Weitz & Luxenberg","company":"Weitz & Luxenberg P.C.","case_type":"Depo-Provera","case_key":"depo","ad_copy":"Depo-Provera and meningioma lawsuits now under review.","cta_text":"Get Quote","link_caption":"weitzandluxenb.com","landing_url":"https://weitzandluxenb.com/claim?utm_source=fb","media_type":"image","platforms":["facebook","instagram","messenger"],"start":"2026-05-30T06:00:00Z","end":null,"status":"ACTIVE","snapshot_url":"https://www.facebook.com/ads/library/?id=100000143225571","duplicate_group":"b12cdbeb4f3d","duplicate_count":1,"rating":0,"first_seen":"2026-05-30T06:00:00Z","last_seen":"2026-06-10T14:00:00Z"},{"id":"100000150234427","page_id":"642104049154778","advertiser":"Weitz & Luxenberg","company":"Weitz & Luxenberg P.C.","case_type":"Talcum Powder","case_key":"talc","ad_copy":"Used talcum powder and later diagnosed with ovarian cancer? You may have a case.","cta_text":"Contact Us","link_caption":"weitzandluxenb.com","landing_url":"https://weitzandluxenb.com/claim?utm_source=fb","media_type":"video","platforms":["facebook","instagram"],"start":"2026-06-02T06:00:00Z","end":"2026-07-04T06:00:00Z","status":"INACTIVE","snapshot_url":"https://www.facebook.com/ads/library/?id=100000150234427","duplicate_group":"93bf0d96fcb7","duplicate_count":1,"rating":2,"first_seen":"2026-06-02T06:00:00Z","last_seen":"2026-06-10T12:00:00Z"},{"id":"100000155468791","page_id":"642104049154778","advertiser":"Weitz & Luxenberg","company":"Weitz & Luxenberg P.C.","case_type":"Roundup / NHL","case_key":"roundup","ad_copy":"Glyphosate exposure and cancer \u2014 talk to a lawyer at no cost.","cta_text":"Get Quote","link_caption":"weitzandluxenb.com","landing_url":"https://weitzandluxenb.com/claim?utm_source=fb","media_type":"image","platforms":["facebook","instagram"],"start":"2026-05-27T09:00:00Z","end":null,"status":"ACTIVE","snapshot_url":"https://www.facebook.com/ads/library/?id=100000155468791","duplicate_group":"83d870931e15","duplicate_count":1,"rating":0,"first_seen":"2026-05-27T09:00:00Z","last_seen":"2026-06-10T10:00:00Z"},{"id":"100000156088699","page_id":"642104049154778","advertiser":"Weitz & Luxenberg","company":"Weitz & Luxenberg P.C.","case_type":"Talcum Powder","case_key":"talc","ad_copy":"Johnson & Johnson talc lawsuits are being filed nationwide. See if you qualify.","cta_text":"Contact Us","link_caption":"weitzandluxenb.com","landing_url":"https://weitzandluxenb.com/claim?utm_source=fb","media_type":"video","platforms":["instagram"],"start":"2026-05-19T06:00:00Z","end":null,"status":"ACTIVE","snapshot_url":"https://www.facebook.com/ads/library/?id=100000156088699","duplicate_group":"564b65982616","duplicate_count":14,"rating":0,"first_seen":"2026-05-19T06:00:00Z","last_seen":"2026-06-10T09:00:00Z"},{"id":"100000162683589","page_id":"642104049154778","advertiser":"Weitz & Luxenberg","company":"Weitz & Luxenberg P.C.","case_type":"Roundup / NHL","case_key":"roundup","ad_copy":"Glyphosate exposure and cancer \u2014 talk to a lawyer at no cost.","cta_text":"Apply Now","link_caption":"weitzandluxenb.com","landing_url":"https://weitzandluxenb.com/claim?utm_source=fb","media_type":"video","platforms":["facebook","instagram"],"start":"2026-04-14T11:00:00Z","end":"2026-05-14T11:00:00Z","status":"INACTIVE","snapshot_url":"https://www.facebook.com/ads/library/?id=100000162683589","duplicate_group":"83d870931e15","duplicate_count":1,"rating":3,"first_seen":"2026-04-14T11:00:00Z","last_seen":"2026-06-10T12:00:00Z"},{"id":"100000164861584","page_id":"642104049154778","advertiser":"Weitz & Luxenberg","company":"Weitz & Luxenberg P.C.","case_type":"Roundup / NHL","case_key":"roundup","ad_copy":"Roundup settlement claims still open. Groundskeepers and farmers may qualify.","cta_text":"Sign Up","link_caption":"weitzandluxenb.com","landing_url":"https://weitzandluxenb.com/claim?utm_source=fb","media_type":"image","platforms":["instagram"],"start":"2026-03-08T18:00:00Z","end":null,"status":"ACTIVE","snapshot_url":"https://www.facebook.com/ads/library/?id=100000164861584","duplicate_group":"05fd25546905","duplicate_count":14,"rating":0,"first_seen":"2026-03-08T18:00:00Z","last_seen":"2026-06-10T09:00:00Z"},{"id":"100000169778290","page_id":"642104049154778","advertiser":"Weitz & Luxenberg","company":"Weitz & Luxenberg P.C.","case_type":"Talcum Powder","case_key":"talc","ad_copy":"Johnson & Johnson talc lawsuits are being filed nationwide. See if you qualify.","cta_text":"Sign Up","link_caption":"weitzandluxenb.com","landing_url":"https://weitzandluxenb.com/claim?utm_source=fb","media_type":"image","platforms":["facebook"],"start":"2026-05-30T17:00:00Z","end":"2026-07-04T17:00:00Z","status":"INACTIVE","snapshot_url":"https://www.facebook.com/ads/library/?id=100000169778290","duplicate_group":"564b65982616","duplicate_count":1,"rating":0,"first_seen":"2026-05-30T17:00:00Z","last_seen":"2026-06-10T13:00:00Z"},{"id":"100000172847815","page_id":"929508614103464","advertiser":"The Carlson Law Firm","company":"The Carlson Law Firm, P.C.","case_type":"Hernia Mesh","case_key":"mesh","ad_copy":"Defective hernia mesh lawsuits are active. Free case evaluation.","cta_text":"Get Offer","link_caption":"thecarlsonlawf.com","landing_url":"https://thecarlsonlawf.com/claim?utm_source=fb","media_type":"image","platforms":["facebook","instagram","messenger"],"start":"2026-04-01T04:00:00Z","end":null,"status":"ACTIVE","snapshot_url":"https://www.facebook.com/ads/library/?id=100000172847815","duplicate_group":"83c82075d20f","duplicate_count":1,"rating":0,"first_seen":"2026-04-01T04:00:00Z","last_seen":"2026-06-10T11:00:00Z"},{"id":"100000175261472","page_id":"929508614103464","advertiser":"The Carlson Law Firm","company":"The Carlson Law Firm, P.C.","case_type":"Paraquat","case_key":"paraquat","ad_copy":"Paraquat and Parkinson's \u2014 free, no-obligation case review.","cta_text":"Get Quote","link_caption":"thecarlsonlawf.com","landing_url":"https://thecarlsonlawf.com/claim?utm_source=fb","media_type":"image","platforms":["facebook","instagram"],"start":"2026-05-09T22:00:00Z","end":"2026-05-17T22:00:00Z","status":"INACTIVE","snapshot_url":"https://www.facebook.com/ads/library/?id=100000175261472","duplicate_group":"1e61e1ee4911","duplicate_count":5,"rating":0,"first_seen":"2026-05-09T22:00:00Z","last_seen":"2026-06-10T14:00:00Z"},{"id":"100000183552618","page_id":"929508614103464","advertiser":"The Carlson Law Firm","company":"The Carlson Law Firm, P.C.","case_type":"Paraquat","case_key":"paraquat","ad_copy":"Farmers and agricultural workers may qualify for a Paraquat claim.","cta_text":"Get Quote","link_caption":"thecarlsonlawf.com","landing_url":"https://thecarlsonlawf.com/claim?utm_source=fb","media_type":"video","platforms":["facebook","instagram"],"start":"2026-05-30T20:00:00Z","end":"2026-06-11T20:00:00Z","status":"INACTIVE","snapshot_url":"https://www.facebook.com/ads/library/?id=100000183552618","duplicate_group":"1a9437fe3ec5","duplicate_count":3,"rating":0,"first_seen":"2026-05-30T20:00:00Z","last_seen":"2026-06-10T09:00:00Z"},{"id":"100000192014561","page_id":"929508614103464","advertiser":"The Carlson Law Firm","company":"The Carlson Law Firm, P.C.","case_type":"Hernia Mesh","case_key":"mesh","ad_copy":"Hernia mesh complications? Revision surgery may entitle you to compensation.","cta_text":"Get Quote","link_caption":"thecarlsonlawf.com","landing_url":"https://thecarlsonlawf.com/claim?utm_source=fb","media_type":"image","platforms":["facebook","instagram","messenger","audience_network"],"start":"2026-03-22T01:00:00Z","end":"2026-04-26T01:00:00Z","status":"INACTIVE","snapshot_url":"https://www.facebook.com/ads/library/?id=100000192014561","duplicate_group":"28ee8f6e342d","duplicate_count":8,"rating":0,"first_seen":"2026-03-22T01:00:00Z","last_seen":"2026-06-10T14:00:00Z"},{"id":"100000198066229","page_id":"929508614103464","advertiser":"The Carlson Law Firm","company":"The Carlson Law Firm, P.C.","case_type":"Depo-Provera","case_key":"depo","ad_copy":"If you used Depo-Provera and developed a tumor, you may qualify.","cta_text":"Get Quote","link_caption":"thecarlsonlawf.com","landing_url":"https://thecarlsonlawf.com/claim?utm_source=fb","media_type":"video","platforms":["instagram"],"start":"2026-03-20T07:00:00Z","end":null,"status":"ACTIVE","snapshot_url":"https://www.facebook.com/ads/library/?id=100000198066229","duplicate_group":"ed2a544584a7","duplicate_count":1,"rating":3,"first_seen":"2026-03-20T07:00:00Z","last_seen":"2026-06-10T11:00:00Z"},{"id":"100000199242506","page_id":"929508614103464","advertiser":"The Carlson Law Firm","company":"The Carlson Law Firm, P.C.","case_type":"Rideshare Assault","case_key":"rideshare","ad_copy":"Assaulted during an Uber or Lyft ride? Confidential legal help is available.","cta_text":"Get Quote","link_caption":"thecarlsonlawf.com","landing_url":"https://thecarlsonlawf.com/claim?utm_source=fb","media_type":"image","platforms":["facebook"],"start":"2026-03-21T21:00:00Z","end":"2026-04-24T21:00:00Z","status":"INACTIVE","snapshot_url":"https://www.facebook.com/ads/library/?id=100000199242506","duplicate_group":"898201b20347","duplicate_count":1,"rating":0,"first_seen":"2026-03-21T21:00:00Z","last_seen":"2026-06-10T10:00:00Z"},{"id":"100000206965731","page_id":"723388065622885","advertiser":"Riverside Legal Group","company":"Riverside Legal Group LLC","case_type":"Rideshare Assault","case_key":"rideshare","ad_copy":"Survivors of rideshare assault \u2014 speak with an advocate privately.","cta_text":"Get Quote","link_caption":"riversidelegal.com","landing_url":"https://riversidelegal.com/claim?utm_source=fb","media_type":"image","platforms":["facebook","instagram","audience_network"],"start":"2026-05-09T12:00:00Z","end":"2026-05-27T12:00:00Z","status":"INACTIVE","snapshot_url":"https://www.facebook.com/ads/library/?id=100000206965731","duplicate_group":"b09249c08ff9","duplicate_count":1,"rating":0,"first_seen":"2026-05-09T12:00:00Z","last_seen":"2026-06-10T11:00:00Z"},{"id":"100000212073004","page_id":"723388065622885","advertiser":"Riverside Legal Group","company":"Riverside Legal Group LLC","case_type":"Hair Relaxer","case_key":"relaxer","ad_copy":"Used hair straightener products and later diagnosed with cancer?","cta_text":"Learn More","link_caption":"riversidelegal.com","landing_url":"https://riversidelegal.com/claim?utm_source=fb","media_type":"image","platforms":["facebook","instagram","messenger","audience_network"],"start":"2026-03-21T18:00:00Z","end":null,"status":"ACTIVE","snapshot_url":"https://www.facebook.com/ads/library/?id=100000212073004","duplicate_group":"33bfc2c6bf4e","duplicate_count":1,"rating":0,"first_seen":"2026-03-21T18:00:00Z","last_seen":"2026-06-10T13:00:00Z"},{"id":"100000220739035","page_id":"723388065622885","advertiser":"Riverside Legal Group","company":"Riverside Legal Group LLC","case_type":"Rideshare Assault","case_key":"rideshare","ad_copy":"Rideshare passengers who were harmed may be entitled to compensation.","cta_text":"Get Offer","link_caption":"riversidelegal.com","landing_url":"https://riversidelegal.com/claim?utm_source=fb","media_type":"video","platforms":["instagram"],"start":"2026-05-28T16:00:00Z","end":null,"status":"ACTIVE","snapshot_url":"https://www.facebook.com/ads/library/?id=100000220739035","duplicate_group":"fea4e8670287","duplicate_count":1,"rating":0,"first_seen":"2026-05-28T16:00:00Z","last_seen":"2026-06-10T11:00:00Z"},{"id":"100000229238684","page_id":"723388065622885","advertiser":"Riverside Legal Group","company":"Riverside Legal Group LLC","case_type":"Rideshare Assault","case_key":"rideshare","ad_copy":"Survivors of rideshare assault \u2014 speak with an advocate privately.","cta_text":"Sign Up","link_caption":"riversidelegal.com","landing_url":"https://riversidelegal.com/claim?utm_source=fb","media_type":"video","platforms":["facebook","instagram","messenger"],"start":"2026-05-30T23:00:00Z","end":null,"status":"ACTIVE","snapshot_url":"https://www.facebook.com/ads/library/?id=100000229238684","duplicate_group":"b09249c08ff9","duplicate_count":1,"rating":3,"first_seen":"2026-05-30T23:00:00Z","last_seen":"2026-06-10T11:00:00Z"},{"id":"100000231463428","page_id":"723388065622885","advertiser":"Riverside Legal Group","company":"Riverside Legal Group LLC","case_type":"Ozempic / GLP-1","case_key":"ozempic","ad_copy":"Severe stomach problems after Ozempic or Wegovy? You may be entitled to compensation.","cta_text":"Sign Up","link_caption":"riversidelegal.com","landing_url":"https://riversidelegal.com/claim?utm_source=fb","media_type":"image","platforms":["facebook"],"start":"2026-03-28T12:00:00Z","end":null,"status":"ACTIVE","snapshot_url":"https://www.facebook.com/ads/library/?id=100000231463428","duplicate_group":"0f3a58fd152c","duplicate_count":14,"rating":0,"first_seen":"2026-03-28T12:00:00Z","last_seen":"2026-06-10T09:00:00Z"},{"id":"100000238265236","page_id":"12492216911984","advertiser":"National Injury Help","company":"National Injury Help LLC","case_type":"Social Media Harm","case_key":"social","ad_copy":"Did your teen suffer harm from Instagram or TikTok? Parents are taking action.","cta_text":"Apply Now","link_caption":"nationalinjury.com","landing_url":"https://nationalinjury.com/claim?utm_source=fb","media_type":"video","platforms":["facebook","instagram","audience_network"],"start":"2026-04-21T14:00:00Z","end":null,"status":"ACTIVE","snapshot_url":"https://www.facebook.com/ads/library/?id=100000238265236","duplicate_group":"7b008807cc20","duplicate_count":2,"rating":0,"first_seen":"2026-04-21T14:00:00Z","last_seen":"2026-06-10T13:00:00Z"},{"id":"100000241549228","page_id":"12492216911984","advertiser":"National Injury Help","company":"National Injury Help LLC","case_type":"AFFF Firefighting Foam","case_key":"afff","ad_copy":"PFAS 'forever chemicals' in firefighting foam linked to kidney and testicular cancer.","cta_text":"Learn More","link_caption":"nationalinjury.com","landing_url":"https://nationalinjury.com/claim?utm_source=fb","media_type":"video","platforms":["facebook","instagram","messenger"],"start":"2026-06-10T04:00:00Z","end":"2026-07-08T04:00:00Z","status":"INACTIVE","snapshot_url":"https://www.facebook.com/ads/library/?id=100000241549228","duplicate_group":"a235e4fb0ca5","duplicate_count":8,"rating":0,"first_seen":"2026-06-10T04:00:00Z","last_seen":"2026-06-10T09:00:00Z"},{"id":"100000242359033","page_id":"12492216911984","advertiser":"National Injury Help","company":"National Injury Help LLC","case_type":"AFFF Firefighting Foam","case_key":"afff","ad_copy":"Firefighters exposed to AFFF foam may be eligible for compensation.","cta_text":"Apply Now","link_caption":"nationalinjury.com","landing_url":"https://nationalinjury.com/claim?utm_source=fb","media_type":"video","platforms":["facebook","instagram","audience_network"],"start":"2026-03-27T12:00:00Z","end":null,"status":"ACTIVE","snapshot_url":"https://www.facebook.com/ads/library/?id=100000242359033","duplicate_group":"0e537c2abe58","duplicate_count":3,"rating":0,"first_seen":"2026-03-27T12:00:00Z","last_seen":"2026-06-10T14:00:00Z"},{"id":"100000249535448","page_id":"12492216911984","advertiser":"National Injury Help","company":"National Injury Help LLC","case_type":"Hernia Mesh","case_key":"mesh","ad_copy":"If your hernia mesh failed, you may qualify for a significant claim.","cta_text":"Sign Up","link_caption":"nationalinjury.com","landing_url":"https://nationalinjury.com/claim?utm_source=fb","media_type":"image","platforms":["facebook","instagram"],"start":"2026-05-07T01:00:00Z","end":null,"status":"ACTIVE","snapshot_url":"https://www.facebook.com/ads/library/?id=100000249535448","duplicate_group":"759c334d7a1c","duplicate_count":3,"rating":2,"first_seen":"2026-05-07T01:00:00Z","last_seen":"2026-06-10T09:00:00Z"},{"id":"100000251860310","page_id":"12492216911984","advertiser":"National Injury Help","company":"National Injury Help LLC","case_type":"Ozempic / GLP-1","case_key":"ozempic","ad_copy":"Ozempic lawsuit claims are being accepted. Find out if you qualify.","cta_text":"Sign Up","link_caption":"nationalinjury.com","landing_url":"https://nationalinjury.com/claim?utm_source=fb","media_type":"video","platforms":["instagram"],"start":"2026-05-31T13:00:00Z","end":"2026-06-29T13:00:00Z","status":"INACTIVE","snapshot_url":"https://www.facebook.com/ads/library/?id=100000251860310","duplicate_group":"4b7c529dd809","duplicate_count":2,"rating":0,"first_seen":"2026-05-31T13:00:00Z","last_seen":"2026-06-10T12:00:00Z"},{"id":"100000256225223","page_id":"12492216911984","advertiser":"National Injury Help","company":"National Injury Help LLC","case_type":"Ozempic / GLP-1","case_key":"ozempic","ad_copy":"Severe stomach problems after Ozempic or Wegovy? You may be entitled to compensation.","cta_text":"Sign Up","link_caption":"nationalinjury.com","landing_url":"https://nationalinjury.com/claim?utm_source=fb","media_type":"image","platforms":["facebook","instagram","audience_network"],"start":"2026-04-18T04:00:00Z","end":null,"status":"ACTIVE","snapshot_url":"https://www.facebook.com/ads/library/?id=100000256225223","duplicate_group":"95555177954c","duplicate_count":3,"rating":0,"first_seen":"2026-04-18T04:00:00Z","last_seen":"2026-06-10T13:00:00Z"},{"id":"100000264564771","page_id":"12492216911984","advertiser":"National Injury Help","company":"National Injury Help LLC","case_type":"Ozempic / GLP-1","case_key":"ozempic","ad_copy":"Ozempic lawsuit claims are being accepted. Find out if you qualify.","cta_text":"Apply Now","link_caption":"nationalinjury.com","landing_url":"https://nationalinjury.com/claim?utm_source=fb","media_type":"image","platforms":["facebook"],"start":"2026-05-19T18:00:00Z","end":null,"status":"ACTIVE","snapshot_url":"https://www.facebook.com/ads/library/?id=100000264564771","duplicate_group":"4b7c529dd809","duplicate_count":1,"rating":0,"first_seen":"2026-05-19T18:00:00Z","last_seen":"2026-06-10T11:00:00Z"},{"id":"100000269921531","page_id":"12492216911984","advertiser":"National Injury Help","company":"National Injury Help LLC","case_type":"Paraquat","case_key":"paraquat","ad_copy":"Farmers and agricultural workers may qualify for a Paraquat claim.","cta_text":"Sign Up","link_caption":"nationalinjury.com","landing_url":"https://nationalinjury.com/claim?utm_source=fb","media_type":"image","platforms":["facebook","instagram","messenger","audience_network"],"start":"2026-05-17T07:00:00Z","end":null,"status":"ACTIVE","snapshot_url":"https://www.facebook.com/ads/library/?id=100000269921531","duplicate_group":"12681cee013d","duplicate_count":1,"rating":0,"first_seen":"2026-05-17T07:00:00Z","last_seen":"2026-06-10T12:00:00Z"},{"id":"100000278279033","page_id":"490664180550853","advertiser":"Beacon Claims Center","company":"Beacon Claims Center","case_type":"Ozempic / GLP-1","case_key":"ozempic","ad_copy":"GLP-1 drug injuries including gastroparesis are under legal review.","cta_text":"Apply Now","link_caption":"beaconclaimsce.com","landing_url":"https://beaconclaimsce.com/claim?utm_source=fb","media_type":"image","platforms":["instagram"],"start":"2026-04-04T08:00:00Z","end":null,"status":"ACTIVE","snapshot_url":"https://www.facebook.com/ads/library/?id=100000278279033","duplicate_group":"559a9c4edffc","duplicate_count":3,"rating":0,"first_seen":"2026-04-04T08:00:00Z","last_seen":"2026-06-10T12:00:00Z"},{"id":"100000285524051","page_id":"490664180550853","advertiser":"Beacon Claims Center","company":"Beacon Claims Center","case_type":"Depo-Provera","case_key":"depo","ad_copy":"If you used Depo-Provera and developed a tumor, you may qualify.","cta_text":"Get Quote","link_caption":"beaconclaimsce.com","landing_url":"https://beaconclaimsce.com/claim?utm_source=fb","media_type":"video","platforms":["facebook","instagram"],"start":"2026-05-30T06:00:00Z","end":"2026-06-26T06:00:00Z","status":"INACTIVE","snapshot_url":"https://www.facebook.com/ads/library/?id=100000285524051","duplicate_group":"17a8997458f5","duplicate_count":2,"rating":3,"first_seen":"2026-05-30T06:00:00Z","last_seen":"2026-06-10T14:00:00Z"},{"id":"100000289692607","page_id":"490664180550853","advertiser":"Beacon Claims Center","company":"Beacon Claims Center","case_type":"Hair Relaxer","case_key":"relaxer","ad_copy":"Hair relaxer lawsuit claims are being filed. Free evaluation.","cta_text":"Apply Now","link_caption":"beaconclaimsce.com","landing_url":"https://beaconclaimsce.com/claim?utm_source=fb","media_type":"video","platforms":["facebook","instagram","messenger","audience_network"],"start":"2026-04-09T14:00:00Z","end":null,"status":"ACTIVE","snapshot_url":"https://www.facebook.com/ads/library/?id=100000289692607","duplicate_group":"2b73a850f09e","duplicate_count":14,"rating":1,"first_seen":"2026-04-09T14:00:00Z","last_seen":"2026-06-10T13:00:00Z"},{"id":"100000290356084","page_id":"490664180550853","advertiser":"Beacon Claims Center","company":"Beacon Claims Center","case_type":"Depo-Provera","case_key":"depo","ad_copy":"If you used Depo-Provera and developed a tumor, you may qualify.","cta_text":"Learn More","link_caption":"beaconclaimsce.com","landing_url":"https://beaconclaimsce.com/claim?utm_source=fb","media_type":"video","platforms":["instagram"],"start":"2026-03-12T18:00:00Z","end":"2026-04-13T18:00:00Z","status":"INACTIVE","snapshot_url":"https://www.facebook.com/ads/library/?id=100000290356084","duplicate_group":"17a8997458f5","duplicate_count":1,"rating":0,"first_seen":"2026-03-12T18:00:00Z","last_seen":"2026-06-10T13:00:00Z"},{"id":"100000292237359","page_id":"490664180550853","advertiser":"Beacon Claims Center","company":"Beacon Claims Center","case_type":"Talcum Powder","case_key":"talc","ad_copy":"Baby powder linked to cancer. Free, confidential case review available now.","cta_text":"Get Quote","link_caption":"beaconclaimsce.com","landing_url":"https://beaconclaimsce.com/claim?utm_source=fb","media_type":"video","platforms":["facebook","instagram","messenger"],"start":"2026-05-24T18:00:00Z","end":null,"status":"ACTIVE","snapshot_url":"https://www.facebook.com/ads/library/?id=100000292237359","duplicate_group":"f19363d2a98c","duplicate_count":2,"rating":0,"first_seen":"2026-05-24T18:00:00Z","last_seen":"2026-06-10T12:00:00Z"},{"id":"100000296911553","page_id":"490664180550853","advertiser":"Beacon Claims Center","company":"Beacon Claims Center","case_type":"Depo-Provera","case_key":"depo","ad_copy":"Diagnosed with a brain tumor after Depo-Provera injections? You may have a case.","cta_text":"Apply Now","link_caption":"beaconclaimsce.com","landing_url":"https://beaconclaimsce.com/claim?utm_source=fb","media_type":"image","platforms":["facebook","instagram","messenger"],"start":"2026-05-12T19:00:00Z","end":null,"status":"ACTIVE","snapshot_url":"https://www.facebook.com/ads/library/?id=100000296911553","duplicate_group":"b28cf9605c2f","duplicate_count":14,"rating":3,"first_seen":"2026-05-12T19:00:00Z","last_seen":"2026-06-10T09:00:00Z"},{"id":"100000302068833","page_id":"490664180550853","advertiser":"Beacon Claims Center","company":"Beacon Claims Center","case_type":"AFFF Firefighting Foam","case_key":"afff","ad_copy":"PFAS 'forever chemicals' in firefighting foam linked to kidney and testicular cancer.","cta_text":"Contact Us","link_caption":"beaconclaimsce.com","landing_url":"https://beaconclaimsce.com/claim?utm_source=fb","media_type":"video","platforms":["facebook","instagram"],"start":"2026-04-01T07:00:00Z","end":null,"status":"ACTIVE","snapshot_url":"https://www.facebook.com/ads/library/?id=100000302068833","duplicate_group":"e0d83926928d","duplicate_count":2,"rating":0,"first_seen":"2026-04-01T07:00:00Z","last_seen":"2026-06-10T13:00:00Z"},{"id":"100000302640893","page_id":"95199612424035","advertiser":"Atlas Tort Partners","company":"Atlas Tort Partners LLP","case_type":"Hair Relaxer","case_key":"relaxer","ad_copy":"Used hair straightener products and later diagnosed with cancer?","cta_text":"Learn More","link_caption":"atlastortpartn.com","landing_url":"https://atlastortpartn.com/claim?utm_source=fb","media_type":"image","platforms":["facebook","instagram","messenger"],"start":"2026-05-11T17:00:00Z","end":null,"status":"ACTIVE","snapshot_url":"https://www.facebook.com/ads/library/?id=100000302640893","duplicate_group":"adc176362ff5","duplicate_count":1,"rating":0,"first_seen":"2026-05-11T17:00:00Z","last_seen":"2026-06-10T09:00:00Z"},{"id":"100000306003279","page_id":"95199612424035","advertiser":"Atlas Tort Partners","company":"Atlas Tort Partners LLP","case_type":"Paraquat","case_key":"paraquat","ad_copy":"Farmers and agricultural workers may qualify for a Paraquat claim.","cta_text":"Sign Up","link_caption":"atlastortpartn.com","landing_url":"https://atlastortpartn.com/claim?utm_source=fb","media_type":"image","platforms":["facebook"],"start":"2026-05-03T15:00:00Z","end":"2026-05-10T15:00:00Z","status":"INACTIVE","snapshot_url":"https://www.facebook.com/ads/library/?id=100000306003279","duplicate_group":"de71937b4486","duplicate_count":1,"rating":0,"first_seen":"2026-05-03T15:00:00Z","last_seen":"2026-06-10T13:00:00Z"},{"id":"100000306949801","page_id":"95199612424035","advertiser":"Atlas Tort Partners","company":"Atlas Tort Partners LLP","case_type":"Social Media Harm","case_key":"social","ad_copy":"Social media addiction lawsuits on behalf of minors now being reviewed.","cta_text":"Get Offer","link_caption":"atlastortpartn.com","landing_url":"https://atlastortpartn.com/claim?utm_source=fb","media_type":"image","platforms":["facebook"],"start":"2026-03-22T23:00:00Z","end":null,"status":"ACTIVE","snapshot_url":"https://www.facebook.com/ads/library/?id=100000306949801","duplicate_group":"9882eb674f65","duplicate_count":1,"rating":3,"first_seen":"2026-03-22T23:00:00Z","last_seen":"2026-06-10T13:00:00Z"},{"id":"100000314493542","page_id":"95199612424035","advertiser":"Atlas Tort Partners","company":"Atlas Tort Partners LLP","case_type":"Camp Lejeune Water","case_key":"lejeune","ad_copy":"Stationed at Camp Lejeune between 1953 and 1987? You may be owed compensation.","cta_text":"Learn More","link_caption":"atlastortpartn.com","landing_url":"https://atlastortpartn.com/claim?utm_source=fb","media_type":"video","platforms":["facebook","instagram","messenger","audience_network"],"start":"2026-05-23T01:00:00Z","end":null,"status":"ACTIVE","snapshot_url":"https://www.facebook.com/ads/library/?id=100000314493542","duplicate_group":"617ea71c9469","duplicate_count":1,"rating":2,"first_seen":"2026-05-23T01:00:00Z","last_seen":"2026-06-10T12:00:00Z"},{"id":"100000320845722","page_id":"95199612424035","advertiser":"Atlas Tort Partners","company":"Atlas Tort Partners LLP","case_type":"Social Media Harm","case_key":"social","ad_copy":"Did your teen suffer harm from Instagram or TikTok? Parents are taking action.","cta_text":"Get Offer","link_caption":"atlastortpartn.com","landing_url":"https://atlastortpartn.com/claim?utm_source=fb","media_type":"video","platforms":["facebook","instagram"],"start":"2026-05-17T18:00:00Z","end":"2026-06-18T18:00:00Z","status":"INACTIVE","snapshot_url":"https://www.facebook.com/ads/library/?id=100000320845722","duplicate_group":"4f5873299232","duplicate_count":1,"rating":1,"first_seen":"2026-05-17T18:00:00Z","last_seen":"2026-06-10T12:00:00Z"},{"id":"100000324325358","page_id":"95199612424035","advertiser":"Atlas Tort Partners","company":"Atlas Tort Partners LLP","case_type":"Social Media Harm","case_key":"social","ad_copy":"Did your teen suffer harm from Instagram or TikTok? Parents are taking action.","cta_text":"Learn More","link_caption":"atlastortpartn.com","landing_url":"https://atlastortpartn.com/claim?utm_source=fb","media_type":"video","platforms":["facebook","instagram","messenger"],"start":"2026-05-31T03:00:00Z","end":null,"status":"ACTIVE","snapshot_url":"https://www.facebook.com/ads/library/?id=100000324325358","duplicate_group":"4f5873299232","duplicate_count":1,"rating":0,"first_seen":"2026-05-31T03:00:00Z","last_seen":"2026-06-10T12:00:00Z"},{"id":"100000330436440","page_id":"95199612424035","advertiser":"Atlas Tort Partners","company":"Atlas Tort Partners LLP","case_type":"Ozempic / GLP-1","case_key":"ozempic","ad_copy":"Severe stomach problems after Ozempic or Wegovy? You may be entitled to compensation.","cta_text":"Learn More","link_caption":"atlastortpartn.com","landing_url":"https://atlastortpartn.com/claim?utm_source=fb","media_type":"video","platforms":["instagram"],"start":"2026-04-11T08:00:00Z","end":null,"status":"ACTIVE","snapshot_url":"https://www.facebook.com/ads/library/?id=100000330436440","duplicate_group":"3fd3388fdfc0","duplicate_count":1,"rating":0,"first_seen":"2026-04-11T08:00:00Z","last_seen":"2026-06-10T11:00:00Z"},{"id":"100000331476693","page_id":"95199612424035","advertiser":"Atlas Tort Partners","company":"Atlas Tort Partners LLP","case_type":"Roundup / NHL","case_key":"roundup","ad_copy":"Diagnosed with non-Hodgkin's lymphoma after using Roundup weed killer?","cta_text":"Get Quote","link_caption":"atlastortpartn.com","landing_url":"https://atlastortpartn.com/claim?utm_source=fb","media_type":"video","platforms":["facebook","instagram","audience_network"],"start":"2026-06-05T02:00:00Z","end":null,"status":"ACTIVE","snapshot_url":"https://www.facebook.com/ads/library/?id=100000331476693","duplicate_group":"6ad99605cfbc","duplicate_count":3,"rating":0,"first_seen":"2026-06-05T02:00:00Z","last_seen":"2026-06-10T09:00:00Z"},{"id":"100000336466336","page_id":"95199612424035","advertiser":"Atlas Tort Partners","company":"Atlas Tort Partners LLP","case_type":"Paraquat","case_key":"paraquat","ad_copy":"Farmers and agricultural workers may qualify for a Paraquat claim.","cta_text":"Get Offer","link_caption":"atlastortpartn.com","landing_url":"https://atlastortpartn.com/claim?utm_source=fb","media_type":"image","platforms":["facebook","instagram","messenger"],"start":"2026-04-28T19:00:00Z","end":null,"status":"ACTIVE","snapshot_url":"https://www.facebook.com/ads/library/?id=100000336466336","duplicate_group":"de71937b4486","duplicate_count":8,"rating":0,"first_seen":"2026-04-28T19:00:00Z","last_seen":"2026-06-10T10:00:00Z"},{"id":"100000343679501","page_id":"95199612424035","advertiser":"Atlas Tort Partners","company":"Atlas Tort Partners LLP","case_type":"Hair Relaxer","case_key":"relaxer","ad_copy":"Chemical hair relaxer linked to uterine cancer. See if you qualify.","cta_text":"Learn More","link_caption":"atlastortpartn.com","landing_url":"https://atlastortpartn.com/claim?utm_source=fb","media_type":"video","platforms":["facebook","instagram"],"start":"2026-05-27T23:00:00Z","end":"2026-06-28T23:00:00Z","status":"INACTIVE","snapshot_url":"https://www.facebook.com/ads/library/?id=100000343679501","duplicate_group":"971e01212575","duplicate_count":3,"rating":1,"first_seen":"2026-05-27T23:00:00Z","last_seen":"2026-06-10T13:00:00Z"},{"id":"100000351410127","page_id":"95199612424035","advertiser":"Atlas Tort Partners","company":"Atlas Tort Partners LLP","case_type":"Roundup / NHL","case_key":"roundup","ad_copy":"Diagnosed with non-Hodgkin's lymphoma after using Roundup weed killer?","cta_text":"Get Quote","link_caption":"atlastortpartn.com","landing_url":"https://atlastortpartn.com/claim?utm_source=fb","media_type":"image","platforms":["facebook","instagram","messenger"],"start":"2026-03-14T10:00:00Z","end":null,"status":"ACTIVE","snapshot_url":"https://www.facebook.com/ads/library/?id=100000351410127","duplicate_group":"6ad99605cfbc","duplicate_count":5,"rating":0,"first_seen":"2026-03-14T10:00:00Z","last_seen":"2026-06-10T10:00:00Z"}]};
+
+/* Case palette — deterministic accent per case type */
+const CASE_COLORS = {
+  "Camp Lejeune Water":"#2f7d6b","Talcum Powder":"#9d5fb0","Roundup / NHL":"#3f7a2f",
+  "AFFF Firefighting Foam":"#c0612a","Hernia Mesh":"#b0444f","Social Media Harm":"#2f63b0",
+  "Ozempic / GLP-1":"#1f8aa0","Paraquat":"#7a6a2a","Rideshare Assault":"#5a52b0",
+  "Depo-Provera":"#a83d7a","Hair Relaxer":"#5e6a76"
+};
+const caseColor = c => CASE_COLORS[c] || "#5d6776";
+
+const PLATFORM_ICON = {
+  facebook:'<svg width="13" height="13" viewBox="0 0 24 24" fill="#1877f2"><path d="M24 12c0-6.6-5.4-12-12-12S0 5.4 0 12c0 6 4.4 11 10.1 11.9v-8.4H7.1V12h3V9.4c0-3 1.8-4.6 4.5-4.6 1.3 0 2.7.2 2.7.2v2.9h-1.5c-1.5 0-1.9.9-1.9 1.8V12h3.3l-.5 3.5h-2.8v8.4C19.6 23 24 18 24 12z"/></svg>',
+  instagram:'<svg width="13" height="13" viewBox="0 0 24 24" fill="#c13584"><path d="M12 2.2c3.2 0 3.6 0 4.9.1 3.3.1 4.8 1.7 4.9 4.9.1 1.3.1 1.6.1 4.8s0 3.6-.1 4.8c-.1 3.2-1.7 4.8-4.9 4.9-1.3.1-1.6.1-4.9.1s-3.6 0-4.8-.1c-3.3-.1-4.8-1.7-4.9-4.9C2.2 15.6 2.2 15.2 2.2 12s0-3.6.1-4.8C2.4 4 4 2.4 7.2 2.3 8.4 2.2 8.8 2.2 12 2.2zm0 3.2A6.6 6.6 0 1 0 18.6 12 6.6 6.6 0 0 0 12 5.4zm0 10.9A4.3 4.3 0 1 1 16.3 12 4.3 4.3 0 0 1 12 16.3zm6.8-11.1a1.5 1.5 0 1 0 1.5 1.5 1.5 1.5 0 0 0-1.5-1.5z"/></svg>',
+  messenger:'<svg width="13" height="13" viewBox="0 0 24 24" fill="#0084ff"><path d="M12 2C6.3 2 2 6.2 2 11.6c0 2.9 1.2 5.4 3.2 7.1V23l3-1.6c.8.2 1.6.3 2.5.3 5.7 0 10-4.2 10-9.6S17.7 2 12 2zm1 12.9-2.6-2.7-4.9 2.7 5.4-5.7 2.6 2.7 4.8-2.7-5.3 5.7z"/></svg>',
+  audience_network:'<svg width="13" height="13" viewBox="0 0 24 24" fill="#5d6776"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4M5 5l3 3M16 16l3 3M19 5l-3 3M8 16l-3 3" stroke="#5d6776" stroke-width="1.6" fill="none"/></svg>'
+};
+const PLATFORM_LABEL = {facebook:"Facebook",instagram:"Instagram",messenger:"Messenger",audience_network:"Audience Network"};
+
+/* ============================ STATE ============================ */
+const ratings = {};            // ad.id -> rating override
+DATA.ads.forEach(a => ratings[a.id] = a.rating || 0);
+const state = { search:"", advertiser:"", case:"", platform:"", status:"", scope:"all", sortKey:"start", sortDir:-1 };
+const NOW = new Date(DATA.generated_at || Date.now());
+
+/* ============================ HELPERS ============================ */
+const $ = s => document.querySelector(s);
+const el = (t,c)=>{const e=document.createElement(t);if(c)e.className=c;return e;};
+const esc = s => (s||"").replace(/[&<>"]/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[m]));
+const fmtDate = s => { if(!s) return "—"; const d=new Date(s); return d.toLocaleDateString("en-US",{month:"short",day:"numeric",year:"2-digit"}); };
+const daysAgo = s => { if(!s) return 1e9; return (NOW - new Date(s))/86400000; };
+const isNew = a => daysAgo(a.first_seen) <= 1;
+const isScaling = a => (a.duplicate_count||1) >= 3;
+
+function toast(msg){ const t=$("#toast"); t.textContent=msg; t.classList.add("on"); clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove("on"),2600); }
+
+/* mono sparkline from a duplicate count (synthetic run-volume shape) */
+function spark(n){
+  const pts=[]; const w=46,h=14; const steps=7;
+  let v=Math.max(1,Math.round(n*0.35));
+  for(let i=0;i<steps;i++){ v=Math.max(1,Math.min(n, v + Math.round((Math.random()-.35)*n*.5))); pts.push(v); }
+  pts[steps-1]=n;
+  const mx=Math.max(...pts,1);
+  const d=pts.map((p,i)=>`${i?'L':'M'}${(i/(steps-1))*w},${h-(p/mx)*(h-2)-1}`).join(' ');
+  return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" fill="none"><path d="${d}" stroke="#a9772a" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+}
+
+/* ============================ FILTER + SORT ============================ */
+function filtered(){
+  let rows = DATA.ads.filter(a=>{
+    if(state.advertiser && a.advertiser!==state.advertiser) return false;
+    if(state.case && a.case_type!==state.case) return false;
+    if(state.platform && !(a.platforms||[]).includes(state.platform)) return false;
+    if(state.status && a.status!==state.status) return false;
+    if(state.scope==="scaling" && !isScaling(a)) return false;
+    if(state.search){
+      const q=state.search.toLowerCase();
+      if(!((a.ad_copy||"").toLowerCase().includes(q) || (a.advertiser||"").toLowerCase().includes(q) || (a.case_type||"").toLowerCase().includes(q))) return false;
+    }
+    return true;
+  });
+  const k=state.sortKey, dir=state.sortDir;
+  rows.sort((x,y)=>{
+    let a=x[k], b=y[k];
+    if(k==="rating"){a=ratings[x.id];b=ratings[y.id];}
+    if(k==="start"||k==="end"){a=a?new Date(a).getTime():0;b=b?new Date(b).getTime():0;}
+    if(typeof a==="string"){a=a.toLowerCase();b=(b||"").toLowerCase();}
+    if(a<b)return -1*dir; if(a>b)return 1*dir; return 0;
+  });
+  return rows;
+}
+
+/* ============================ RENDER: KPIs ============================ */
+function renderKpis(){
+  const ads=DATA.ads;
+  const active=ads.filter(a=>a.status==="ACTIVE").length;
+  const fresh=ads.filter(isNew).length;
+  const scaling=ads.filter(isScaling).length;
+  const caseTypes=new Set(ads.map(a=>a.case_type)).size;
+  const tiles=[
+    {lab:"Tracked advertisers",val:DATA.advertisers.length,sub:`${ads.length} ads archived`},
+    {lab:"Active ads",val:active,sub:`${Math.round(active/ads.length*100)}% of library live`},
+    {lab:"New · 24h",val:fresh,sub:fresh?`across ${new Set(ads.filter(isNew).map(a=>a.advertiser)).size} advertisers`:"no new creatives"},
+    {lab:"Case types",val:caseTypes,sub:"in active rotation"},
+    {lab:"Scaling creatives",val:scaling,sub:"3+ concurrent dupes",scaling:true},
+  ];
+  $("#kpis").innerHTML = tiles.map(t=>`
+    <div class="kpi ${t.scaling?'scaling':''}">
+      <div class="rail"></div>
+      <div class="lab">${t.lab}</div>
+      <div class="val tnum">${t.val}</div>
+      <div class="sub">${t.sub}</div>
+    </div>`).join("");
+}
+
+/* ============================ RENDER: case distribution ============================ */
+function renderCaseDist(){
+  const active=DATA.ads.filter(a=>a.status==="ACTIVE");
+  const by={};
+  active.forEach(a=>by[a.case_type]=(by[a.case_type]||0)+1);
+  const arr=Object.entries(by).sort((a,b)=>b[1]-a[1]);
+  const max=Math.max(...arr.map(a=>a[1]),1);
+  $("#caseTotal").textContent=`${active.length} active`;
+  $("#caseDist").innerHTML = arr.map(([c,n])=>`
+    <div class="row" data-case="${esc(c)}" style="cursor:pointer">
+      <div class="cn"><span class="swatch" style="background:${caseColor(c)}"></span>${esc(c)}</div>
+      <div class="bar"><i style="width:${(n/max)*100}%;background:${caseColor(c)}"></i></div>
+      <div class="num"><b>${n}</b> / ${active.length}</div>
+    </div>`).join("");
+  $("#caseDist").querySelectorAll(".row").forEach(r=>r.onclick=()=>{
+    state.case = state.case===r.dataset.case ? "" : r.dataset.case;
+    $("#fCase").value=state.case; render();
+  });
+}
+
+/* ============================ RENDER: advertisers rail ============================ */
+function renderAdvertisers(){
+  $("#advCount").textContent=`${DATA.advertisers.length}`;
+  const list=$("#advList");
+  list.innerHTML="";
+  DATA.advertisers.slice().sort((a,b)=>b.active_ads-a.active_ads).forEach(adv=>{
+    const b=el("button","adv"+(state.advertiser===adv.page_name?" active":""));
+    b.innerHTML=`
+      <div class="top">
+        <span class="dot" style="background:${adv.active_ads?'var(--active)':'var(--inactive)'}"></span>
+        <span class="nm">${esc(adv.page_name)}</span>
+        <span class="meta">${adv.active_ads}<span style="color:var(--faint)">/${adv.total_ads}</span></span>
+      </div>
+      <div class="co">${esc(adv.company)}</div>
+      <div class="chips">${adv.case_types.slice(0,3).map(c=>`<span class="chip" style="color:${caseColor(c)}">${esc(c)}</span>`).join("")}${adv.case_types.length>3?`<span class="chip">+${adv.case_types.length-3}</span>`:""}</div>`;
+    b.onclick=()=>{ state.advertiser = state.advertiser===adv.page_name?"":adv.page_name; render(); };
+    list.appendChild(b);
+  });
+}
+
+/* ============================ RENDER: table ============================ */
+function thumb(a){
+  const col=caseColor(a.case_type);
+  const ic = a.media_type==="video"
+    ? '<svg class="ic" width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>'
+    : '<svg class="ic" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.6" fill="currentColor"/><path d="m4 18 5-5 4 4 3-3 4 4"/></svg>';
+  return `<div class="thumb" style="background:linear-gradient(135deg,${col},${shade(col,-22)})">${ic}<span class="mt">${a.media_type}</span></div>`;
+}
+function shade(hex,p){const n=parseInt(hex.slice(1),16);let r=(n>>16)+p,g=((n>>8)&255)+p,b=(n&255)+p;r=Math.max(0,Math.min(255,r));g=Math.max(0,Math.min(255,g));b=Math.max(0,Math.min(255,b));return`#${(r<<16|g<<8|b).toString(16).padStart(6,"0")}`;}
+
+function renderTable(){
+  const rows=filtered();
+  $("#adsCount").textContent=rows.length;
+  const tb=$("#tbody"); tb.innerHTML="";
+  if(!rows.length){
+    tb.innerHTML=`<tr><td colspan="11"><div class="empty"><div class="big">No ads match these filters</div>Try resetting filters or adding an advertiser to track.</div></td></tr>`;
+    return;
+  }
+  rows.forEach(a=>{
+    const tr=el("tr");
+    const r=ratings[a.id]||0;
+    const stars=[1,2,3].map(i=>`<span class="star ${i<=r?'on':''}" data-id="${a.id}" data-v="${i}">★</span>`).join("");
+    const short=(a.ad_copy||"").length>90;
+    const copyHtml = short
+      ? `${esc(a.ad_copy.slice(0,90))}… <span class="more" data-id="${a.id}">more</span>`
+      : esc(a.ad_copy||"");
+    tr.innerHTML=`
+      <td><div class="rate">${stars}</div></td>
+      <td class="adv-cell"><div class="nm">${esc(a.advertiser)}${isNew(a)?'<span class="new-flag">NEW</span>':''}</div><div class="co">${esc(a.company)}</div></td>
+      <td><span class="case-tag" style="color:${caseColor(a.case_type)};background:${caseColor(a.case_type)}18">${esc(a.case_type)}</span>
+          ${isScaling(a)?`<div class="scaling-badge" title="${a.duplicate_count} near-identical creatives running concurrently">${spark(a.duplicate_count)} ×${a.duplicate_count} scaling</div>`:''}</td>
+      <td><div class="copy">${copyHtml}</div></td>
+      <td class="cta"><span class="b">${esc(a.cta_text||"—")}</span><span class="lnk">${esc(a.link_caption||"")}</span></td>
+      <td>${thumb(a)}</td>
+      <td><div class="plats">${(a.platforms||[]).map(p=>`<span class="plat" title="${PLATFORM_LABEL[p]||p}">${PLATFORM_ICON[p]||p}</span>`).join("")}</div></td>
+      <td><span class="date">${fmtDate(a.start)}</span></td>
+      <td><span class="date">${a.end?fmtDate(a.end):'—'}</span></td>
+      <td><span class="status-tag ${a.status==='ACTIVE'?'active':'inactive'}"><span class="d"></span>${a.status==='ACTIVE'?'Active':'Inactive'}</span></td>
+      <td><a class="snap" href="${esc(a.snapshot_url)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">View<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M7 17 17 7M7 7h10v10"/></svg></a></td>`;
+    tr.onclick=()=>openDrawer(a);
+    tr.querySelectorAll(".star").forEach(s=>s.onclick=ev=>{ev.stopPropagation();const id=s.dataset.id,v=+s.dataset.v;ratings[id]=ratings[id]===v?0:v;render();});
+    tr.querySelectorAll(".more").forEach(m=>m.onclick=ev=>{ev.stopPropagation();openDrawer(a);});
+    tb.appendChild(tr);
+  });
+}
+
+/* ============================ DRAWER ============================ */
+function openDrawer(a){
+  const col=caseColor(a.case_type);
+  const dr=$("#drawer");
+  dr.innerHTML=`
+    <div class="dr-h">
+      <div>
+        <div style="font-family:var(--serif);font-size:19px;font-weight:600;line-height:1.15">${esc(a.advertiser)}</div>
+        <div style="color:var(--faint);font-size:12px;margin-top:2px">${esc(a.company)}</div>
+      </div>
+      <button class="x" id="drX">✕</button>
+    </div>
+    <div class="dr-body">
+      <div class="dr-creative" style="background:linear-gradient(135deg,${col},${shade(col,-26)})">
+        ${a.media_type==="video"?'<svg width="44" height="44" viewBox="0 0 24 24" fill="#fff" opacity=".9"><path d="M8 5v14l11-7z"/></svg>':'<svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.6" opacity=".9"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.6" fill="#fff"/><path d="m4 18 5-5 4 4 3-3 4 4"/></svg>'}
+        <span class="label">${a.media_type} creative · ad id ${esc(a.id)}</span>
+      </div>
+      <span class="case-tag" style="color:${col};background:${col}18">${esc(a.case_type)}</span>
+      ${isScaling(a)?`<span class="scaling-badge" style="margin-left:8px">×${a.duplicate_count} concurrent creatives</span>`:''}
+      <div class="dr-copy">${esc(a.ad_copy||"")}</div>
+      <div class="dr-row"><span class="k">Status</span><span class="v"><span class="status-tag ${a.status==='ACTIVE'?'active':'inactive'}"><span class="d"></span>${a.status==='ACTIVE'?'Active':'Inactive'}</span></span></div>
+      <div class="dr-row"><span class="k">CTA</span><span class="v">${esc(a.cta_text||"—")}</span></div>
+      <div class="dr-row"><span class="k">Landing</span><span class="v mono" style="font-size:12px;word-break:break-all">${esc(a.landing_url||a.link_caption||"—")}</span></div>
+      <div class="dr-row"><span class="k">Platforms</span><span class="v">${(a.platforms||[]).map(p=>PLATFORM_LABEL[p]||p).join(", ")}</span></div>
+      <div class="dr-row"><span class="k">Started</span><span class="v mono">${fmtDate(a.start)}</span></div>
+      <div class="dr-row"><span class="k">Ended</span><span class="v mono">${a.end?fmtDate(a.end):"Running"}</span></div>
+      <div class="dr-row"><span class="k">First seen</span><span class="v mono">${fmtDate(a.first_seen)}</span></div>
+      <div class="dr-row"><span class="k">Last seen</span><span class="v mono">${fmtDate(a.last_seen)}</span></div>
+      <div class="dr-row"><span class="k">Dupe group</span><span class="v mono" style="font-size:11px">${esc(a.duplicate_group||"—")}</span></div>
+    </div>
+    <div class="dr-actions">
+      <a class="btn" href="${esc(a.snapshot_url)}" target="_blank" rel="noopener">Open in Ad Library</a>
+      <a class="btn primary" href="${esc(a.landing_url||'#')}" target="_blank" rel="noopener">Visit landing page</a>
+    </div>`;
+  dr.classList.add("on"); $("#scrim").classList.add("on");
+  $("#drX").onclick=closeDrawer;
+}
+function closeDrawer(){ $("#drawer").classList.remove("on"); $("#scrim").classList.remove("on"); }
+
+/* ============================ EXPORT ============================ */
+function exportRows(){
+  return filtered().map(a=>({
+    Rating:ratings[a.id]||0, Advertiser:a.advertiser, Company:a.company, "Case type":a.case_type,
+    "Ad copy":a.ad_copy, CTA:a.cta_text, "Landing":a.landing_url, "Media":a.media_type,
+    Platforms:(a.platforms||[]).join("|"), Start:a.start, End:a.end||"", Status:a.status,
+    "Scaling x":a.duplicate_count, "Dupe group":a.duplicate_group, Snapshot:a.snapshot_url
+  }));
+}
+function downloadCsv(){
+  const rows=exportRows(); if(!rows.length){toast("Nothing to export with current filters");return;}
+  const cols=Object.keys(rows[0]);
+  const csv=[cols.join(","),...rows.map(r=>cols.map(c=>`"${String(r[c]??"").replace(/"/g,'""')}"`).join(","))].join("\n");
+  dl(new Blob([csv],{type:"text/csv"}),"arbiter_ads.csv");
+  toast(`Exported ${rows.length} ads to CSV`);
+}
+function downloadXlsx(){
+  const rows=exportRows(); if(!rows.length){toast("Nothing to export with current filters");return;}
+  if(window.XLSX){ const ws=XLSX.utils.json_to_sheet(rows);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"Ads");XLSX.writeFile(wb,"arbiter_ads.xlsx");toast(`Exported ${rows.length} ads to XLSX`);return;}
+  const s=document.createElement("script");
+  s.src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js";
+  s.onload=downloadXlsx; s.onerror=()=>{toast("XLSX engine offline — exporting CSV instead");downloadCsv();};
+  document.head.appendChild(s);
+}
+function dl(blob,name){const u=URL.createObjectURL(blob);const a=document.createElement("a");a.href=u;a.download=name;a.click();URL.revokeObjectURL(u);}
+
+/* ============================ WIRING ============================ */
+function buildCaseSelect(){
+  const sel=$("#fCase");
+  [...new Set(DATA.ads.map(a=>a.case_type))].sort().forEach(c=>{
+    const o=el("option");o.value=c;o.textContent=c;sel.appendChild(o);
+  });
+}
+function render(){ renderKpis(); renderCaseDist(); renderAdvertisers(); renderTable(); }
+
+$("#search").oninput=e=>{state.search=e.target.value;renderTable();};
+$("#fCase").onchange=e=>{state.case=e.target.value;render();};
+$("#fPlatform").onchange=e=>{state.platform=e.target.value;renderTable();};
+$("#segStatus").querySelectorAll("button").forEach(b=>b.onclick=()=>{$("#segStatus").querySelectorAll("button").forEach(x=>x.classList.remove("on"));b.classList.add("on");state.status=b.dataset.v;renderTable();});
+$("#segScope").querySelectorAll("button").forEach(b=>b.onclick=()=>{$("#segScope").querySelectorAll("button").forEach(x=>x.classList.remove("on"));b.classList.add("on");state.scope=b.dataset.v;renderTable();});
+$("#clearFilters").onclick=()=>{state.advertiser="";state.case="";state.platform="";state.status="";state.scope="all";state.search="";$("#search").value="";$("#fCase").value="";$("#fPlatform").value="";$("#segStatus").querySelectorAll("button").forEach((x,i)=>x.classList.toggle("on",i===0));$("#segScope").querySelectorAll("button").forEach((x,i)=>x.classList.toggle("on",i===0));render();};
+document.querySelectorAll("th.sortable").forEach(th=>th.onclick=()=>{const k=th.dataset.sort;if(state.sortKey===k)state.sortDir*=-1;else{state.sortKey=k;state.sortDir=k==="start"||k==="end"||k==="rating"?-1:1;}renderTable();updateSortArrows();});
+function updateSortArrows(){document.querySelectorAll("th.sortable").forEach(th=>{const base=th.textContent.replace(/[▲▼]/g,"").trim();th.innerHTML=base+(state.sortKey===th.dataset.sort?` <span class="arr">${state.sortDir>0?"▲":"▼"}</span>`:"");});}
+$("#exportCsv").onclick=downloadCsv;
+$("#exportXlsx").onclick=downloadXlsx;
+$("#scrim").onclick=closeDrawer;
+document.addEventListener("keydown",e=>{if(e.key==="Escape")closeDrawer();});
+$("#addBtn").onclick=()=>{const v=$("#addUrl").value.trim();if(!v){toast("Paste an Ad Library URL first");return;}$("#addUrl").value="";toast("Queued — scraper will pull this advertiser on the next sync");};
+$("#syncBtn").onclick=()=>{const b=$("#syncBtn");b.disabled=true;const o=b.innerHTML;b.innerHTML="Syncing…";setTimeout(()=>{b.disabled=false;b.innerHTML=o;$("#syncAgo").textContent="just now";toast("Sync complete — library is current");},1400);};
+
+/* sync clock */
+function tickClock(){
+  const gen=new Date(DATA.generated_at||Date.now());
+  const mins=Math.max(0,Math.round((Date.now()-gen)/60000));
+  $("#syncAgo").textContent = mins<1?"just now":mins<60?`${mins}m ago`:`${Math.floor(mins/60)}h ago`;
+  const next=DATA.next_sync_at?new Date(DATA.next_sync_at):new Date(gen.getTime()+3*3600000);
+  let rem=Math.max(0,Math.round((next-Date.now())/60000));
+  $("#syncNext").textContent=`${Math.floor(rem/60)}h ${String(rem%60).padStart(2,"0")}m`;
+}
+setInterval(tickClock,30000);
+
+/* boot — prefer live ads.json if served alongside, else embedded sample */
+(async function boot(){
+  try{
+    const r=await fetch("ads.json",{cache:"no-store"});
+    if(r.ok){const j=await r.json(); if(j&&j.ads&&j.ads.length){ Object.assign(DATA,j); DATA.ads.forEach(a=>ratings[a.id]=a.rating||0);} }
+  }catch(e){/* offline / file:// — use embedded sample */}
+  buildCaseSelect(); updateSortArrows(); render(); tickClock();
+})();
+</script>
+</body>
+</html>
