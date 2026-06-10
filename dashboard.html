@@ -318,7 +318,15 @@
               <h2>Ads</h2>
               <span class="pill" id="adsCount">0</span>
             </div>
-            <div style="display:flex;gap:8px">
+            <div style="display:flex;gap:8px;align-items:center">
+              <label style="font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);font-weight:600">Sort</label>
+              <select id="sortSel" style="border:1px solid var(--line-2);border-radius:8px;padding:7px 10px;font-size:12.5px;background:var(--surface);outline:none;color:var(--ink);font-weight:500">
+                <option value="newest">Newest first</option>
+                <option value="oldest">Oldest first</option>
+                <option value="scaling">Most scaling</option>
+                <option value="rated">Highest rated</option>
+                <option value="advertiser">Advertiser A–Z</option>
+              </select>
               <button class="btn sm" id="exportCsv">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0 4-4m-4 4-4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
                 CSV
@@ -367,7 +375,10 @@ const CASE_COLORS = {
   "Camp Lejeune Water":"#2f7d6b","Talcum Powder":"#9d5fb0","Roundup / NHL":"#3f7a2f",
   "AFFF Firefighting Foam":"#c0612a","Hernia Mesh":"#b0444f","Social Media Harm":"#2f63b0",
   "Ozempic / GLP-1":"#1f8aa0","Paraquat":"#7a6a2a","Rideshare Assault":"#5a52b0",
-  "Depo-Provera":"#a83d7a","Hair Relaxer":"#5e6a76"
+  "Depo-Provera":"#a83d7a","Hair Relaxer":"#5e6a76","Tylenol / Autism":"#3d7a8a",
+  "Data Privacy / BIPA":"#3554a0","Securities / Shareholder":"#1f7a5a","TCPA / Robocalls":"#b06a1f",
+  "Roblox / Minor Gaming":"#c0452a","Sports App / DFS":"#6a4fb0","Class Action / Consumer":"#4a7a3a",
+  "Unclassified":"#9aa3b0"
 };
 const caseColor = c => CASE_COLORS[c] || "#5d6776";
 
@@ -625,6 +636,11 @@ document.querySelectorAll("th.sortable").forEach(th=>th.onclick=()=>{const k=th.
 function updateSortArrows(){document.querySelectorAll("th.sortable").forEach(th=>{const base=th.textContent.replace(/[▲▼]/g,"").trim();th.innerHTML=base+(state.sortKey===th.dataset.sort?` <span class="arr">${state.sortDir>0?"▲":"▼"}</span>`:"");});}
 $("#exportCsv").onclick=downloadCsv;
 $("#exportXlsx").onclick=downloadXlsx;
+const SORT_PRESETS={
+  newest:["start",-1], oldest:["start",1], scaling:["duplicate_count",-1],
+  rated:["rating",-1], advertiser:["advertiser",1]
+};
+$("#sortSel").onchange=e=>{const[k,d]=SORT_PRESETS[e.target.value]||["start",-1];state.sortKey=k;state.sortDir=d;renderTable();updateSortArrows();};
 $("#scrim").onclick=closeDrawer;
 document.addEventListener("keydown",e=>{if(e.key==="Escape")closeDrawer();});
 $("#addBtn").onclick=()=>{const v=$("#addUrl").value.trim();if(!v){toast("Paste an Ad Library URL first");return;}$("#addUrl").value="";toast("Queued — scraper will pull this advertiser on the next sync");};
