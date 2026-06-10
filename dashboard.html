@@ -133,6 +133,17 @@
 
   /* ---------- Table ---------- */
   .tbl-h{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--line)}
+  .toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:9px 12px;padding:12px 16px;border-bottom:1px solid var(--line);background:var(--surface-2)}
+  .toolbar .grp{display:flex;align-items:center;gap:6px}
+  .toolbar .tlabel{font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:var(--faint);font-weight:700}
+  .toolbar select{border:1px solid var(--line-2);border-radius:8px;padding:7px 10px;font-size:12.5px;background:var(--surface);color:var(--ink);font-weight:500;outline:none;max-width:190px}
+  .toolbar select:focus{border-color:var(--brand)}
+  .toolbar .tspacer{flex:1}
+  .toggle{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line-2);border-radius:8px;padding:7px 11px;font-size:12.5px;font-weight:600;color:var(--muted);background:var(--surface);cursor:pointer;transition:.12s}
+  .toggle:hover{border-color:#b9c0cb}
+  .toggle.on{background:var(--brand-soft);border-color:#bfd9d0;color:var(--brand-ink)}
+  .toggle .tdot{width:7px;height:7px;border-radius:50%;background:var(--line-2)}
+  .toggle.on .tdot{background:var(--brand)}
   .tbl-h .left{display:flex;align-items:center;gap:11px}
   .tbl-h h2{font-family:var(--serif);font-size:17px;font-weight:600;margin:0}
   .tbl-h .pill{font-family:var(--mono);font-size:11px;background:var(--surface-3);color:var(--muted);padding:3px 9px;border-radius:20px}
@@ -155,7 +166,7 @@
   .adv-cell .nm{font-weight:600;font-size:13px}
   .adv-cell .co{font-size:11px;color:var(--faint);margin-top:1px}
   .case-tag{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:600;padding:3px 9px;border-radius:7px;white-space:nowrap}
-  .copy{max-width:280px;font-size:12.5px;color:#28323f;line-height:1.4}
+  .copy{max-width:360px;font-size:12.5px;color:#28323f;line-height:1.4}
   .copy .more{color:var(--brand);font-weight:600;font-size:11px;cursor:pointer}
   .cta{font-size:12px}
   .cta .b{font-weight:600;display:inline-block;background:var(--surface-3);padding:1px 7px;border-radius:5px;font-size:11px}
@@ -268,41 +279,6 @@
           <div class="panel-h"><h2>Advertisers</h2><span class="count" id="advCount"></span></div>
           <div class="adv-list" id="advList"></div>
         </div>
-
-        <div class="panel">
-          <div class="panel-h"><h2>Filters</h2><button class="btn sm" id="clearFilters">Reset</button></div>
-          <div class="filters">
-            <div class="fld">
-              <label>Case type</label>
-              <select id="fCase"><option value="">All case types</option></select>
-            </div>
-            <div class="fld">
-              <label>Platform</label>
-              <select id="fPlatform">
-                <option value="">All platforms</option>
-                <option value="facebook">Facebook</option>
-                <option value="instagram">Instagram</option>
-                <option value="messenger">Messenger</option>
-                <option value="audience_network">Audience Network</option>
-              </select>
-            </div>
-            <div class="fld">
-              <label>Status</label>
-              <div class="seg" id="segStatus">
-                <button data-v="" class="on">All</button>
-                <button data-v="ACTIVE">Active</button>
-                <button data-v="INACTIVE">Inactive</button>
-              </div>
-            </div>
-            <div class="fld">
-              <label>Show</label>
-              <div class="seg" id="segScope">
-                <button data-v="all" class="on">All ads</button>
-                <button data-v="scaling">Scaling only</button>
-              </div>
-            </div>
-          </div>
-        </div>
       </div>
 
       <!-- MAIN -->
@@ -318,15 +294,7 @@
               <h2>Ads</h2>
               <span class="pill" id="adsCount">0</span>
             </div>
-            <div style="display:flex;gap:8px;align-items:center">
-              <label style="font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);font-weight:600">Sort</label>
-              <select id="sortSel" style="border:1px solid var(--line-2);border-radius:8px;padding:7px 10px;font-size:12.5px;background:var(--surface);outline:none;color:var(--ink);font-weight:500">
-                <option value="newest">Newest first</option>
-                <option value="oldest">Oldest first</option>
-                <option value="scaling">Most scaling</option>
-                <option value="rated">Highest rated</option>
-                <option value="advertiser">Advertiser A–Z</option>
-              </select>
+            <div style="display:flex;gap:8px">
               <button class="btn sm" id="exportCsv">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0 4-4m-4 4-4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
                 CSV
@@ -336,6 +304,43 @@
                 XLSX
               </button>
             </div>
+          </div>
+          <div class="toolbar">
+            <div class="grp"><span class="tlabel">Sort</span>
+              <select id="sortSel">
+                <option value="newest">Newest first</option>
+                <option value="oldest">Oldest first</option>
+                <option value="scaling">Most scaling</option>
+                <option value="rated">Highest rated</option>
+                <option value="advertiser">Advertiser A–Z</option>
+              </select>
+            </div>
+            <div class="grp"><span class="tlabel">Advertiser</span>
+              <select id="fAdv"><option value="">All advertisers</option></select>
+            </div>
+            <div class="grp"><span class="tlabel">Case</span>
+              <select id="fCase"><option value="">All cases</option></select>
+            </div>
+            <div class="grp"><span class="tlabel">Platform</span>
+              <select id="fPlatform">
+                <option value="">All</option>
+                <option value="facebook">Facebook</option>
+                <option value="instagram">Instagram</option>
+                <option value="messenger">Messenger</option>
+                <option value="audience_network">Audience Network</option>
+              </select>
+            </div>
+            <div class="grp"><span class="tlabel">Status</span>
+              <div class="seg" id="segStatus">
+                <button data-v="" class="on">All</button>
+                <button data-v="ACTIVE">Active</button>
+                <button data-v="INACTIVE">Inactive</button>
+              </div>
+            </div>
+            <button class="toggle" id="tScaling"><span class="tdot"></span>Scaling only</button>
+            <button class="toggle" id="tHideUn"><span class="tdot"></span>Hide non-legal</button>
+            <div class="tspacer"></div>
+            <button class="btn sm" id="clearFilters">Reset</button>
           </div>
           <div class="tbl-scroll">
             <table>
@@ -393,7 +398,7 @@ const PLATFORM_LABEL = {facebook:"Facebook",instagram:"Instagram",messenger:"Mes
 /* ============================ STATE ============================ */
 const ratings = {};            // ad.id -> rating override
 DATA.ads.forEach(a => ratings[a.id] = a.rating || 0);
-const state = { search:"", advertiser:"", case:"", platform:"", status:"", scope:"all", sortKey:"start", sortDir:-1 };
+const state = { search:"", advertiser:"", case:"", platform:"", status:"", scope:"all", hideUnclassified:false, sortKey:"start", sortDir:-1 };
 const NOW = new Date(DATA.generated_at || Date.now());
 
 /* ============================ HELPERS ============================ */
@@ -426,6 +431,7 @@ function filtered(){
     if(state.platform && !(a.platforms||[]).includes(state.platform)) return false;
     if(state.status && a.status!==state.status) return false;
     if(state.scope==="scaling" && !isScaling(a)) return false;
+    if(state.hideUnclassified && (a.case_type==="Unclassified" || !a.case_type)) return false;
     if(state.search){
       const q=state.search.toLowerCase();
       if(!((a.ad_copy||"").toLowerCase().includes(q) || (a.advertiser||"").toLowerCase().includes(q) || (a.case_type||"").toLowerCase().includes(q))) return false;
@@ -528,10 +534,11 @@ function renderTable(){
     const tr=el("tr");
     const r=ratings[a.id]||0;
     const stars=[1,2,3].map(i=>`<span class="star ${i<=r?'on':''}" data-id="${a.id}" data-v="${i}">★</span>`).join("");
-    const short=(a.ad_copy||"").length>90;
-    const copyHtml = short
-      ? `${esc(a.ad_copy.slice(0,90))}… <span class="more" data-id="${a.id}">more</span>`
-      : esc(a.ad_copy||"");
+    const copyText = (a.ad_copy && a.ad_copy.trim()) || (a.link_title && a.link_title.trim()) || "";
+    const short=copyText.length>120;
+    const copyHtml = copyText
+      ? (short ? `${esc(copyText.slice(0,120))}… <span class="more" data-id="${a.id}">more</span>` : esc(copyText))
+      : `<span style="color:var(--faint);font-style:italic">Image/video ad — no text${a.link_caption?` · ${esc(a.link_caption)}`:''}</span>`;
     tr.innerHTML=`
       <td><div class="rate">${stars}</div></td>
       <td class="adv-cell"><div class="nm">${esc(a.advertiser)}${isNew(a)?'<span class="new-flag">NEW</span>':''}</div><div class="co">${esc(a.company)}</div></td>
@@ -620,18 +627,29 @@ function dl(blob,name){const u=URL.createObjectURL(blob);const a=document.create
 /* ============================ WIRING ============================ */
 function buildCaseSelect(){
   const sel=$("#fCase");
-  [...new Set(DATA.ads.map(a=>a.case_type))].sort().forEach(c=>{
+  [...new Set(DATA.ads.map(a=>a.case_type))].filter(Boolean).sort().forEach(c=>{
     const o=el("option");o.value=c;o.textContent=c;sel.appendChild(o);
+  });
+}
+function buildAdvSelect(){
+  const sel=$("#fAdv"); if(!sel) return;
+  sel.querySelectorAll("option:not([value=''])").forEach(o=>o.remove());
+  const counts={};
+  DATA.ads.forEach(a=>counts[a.advertiser]=(counts[a.advertiser]||0)+1);
+  Object.entries(counts).sort((a,b)=>b[1]-a[1]).forEach(([name,n])=>{
+    const o=el("option");o.value=name;o.textContent=`${name} (${n})`;sel.appendChild(o);
   });
 }
 function render(){ renderKpis(); renderCaseDist(); renderAdvertisers(); renderTable(); }
 
 $("#search").oninput=e=>{state.search=e.target.value;renderTable();};
-$("#fCase").onchange=e=>{state.case=e.target.value;render();};
+$("#fCase").onchange=e=>{state.case=e.target.value;renderTable();};
+$("#fAdv").onchange=e=>{state.advertiser=e.target.value;renderTable();};
 $("#fPlatform").onchange=e=>{state.platform=e.target.value;renderTable();};
 $("#segStatus").querySelectorAll("button").forEach(b=>b.onclick=()=>{$("#segStatus").querySelectorAll("button").forEach(x=>x.classList.remove("on"));b.classList.add("on");state.status=b.dataset.v;renderTable();});
-$("#segScope").querySelectorAll("button").forEach(b=>b.onclick=()=>{$("#segScope").querySelectorAll("button").forEach(x=>x.classList.remove("on"));b.classList.add("on");state.scope=b.dataset.v;renderTable();});
-$("#clearFilters").onclick=()=>{state.advertiser="";state.case="";state.platform="";state.status="";state.scope="all";state.search="";$("#search").value="";$("#fCase").value="";$("#fPlatform").value="";$("#segStatus").querySelectorAll("button").forEach((x,i)=>x.classList.toggle("on",i===0));$("#segScope").querySelectorAll("button").forEach((x,i)=>x.classList.toggle("on",i===0));render();};
+$("#tScaling").onclick=()=>{const on=$("#tScaling").classList.toggle("on");state.scope=on?"scaling":"all";renderTable();};
+$("#tHideUn").onclick=()=>{state.hideUnclassified=$("#tHideUn").classList.toggle("on");renderTable();};
+$("#clearFilters").onclick=()=>{state.advertiser="";state.case="";state.platform="";state.status="";state.scope="all";state.hideUnclassified=false;state.search="";$("#search").value="";$("#fCase").value="";$("#fAdv").value="";$("#fPlatform").value="";$("#segStatus").querySelectorAll("button").forEach((x,i)=>x.classList.toggle("on",i===0));$("#tScaling").classList.remove("on");$("#tHideUn").classList.remove("on");render();};
 document.querySelectorAll("th.sortable").forEach(th=>th.onclick=()=>{const k=th.dataset.sort;if(state.sortKey===k)state.sortDir*=-1;else{state.sortKey=k;state.sortDir=k==="start"||k==="end"||k==="rating"?-1:1;}renderTable();updateSortArrows();});
 function updateSortArrows(){document.querySelectorAll("th.sortable").forEach(th=>{const base=th.textContent.replace(/[▲▼]/g,"").trim();th.innerHTML=base+(state.sortKey===th.dataset.sort?` <span class="arr">${state.sortDir>0?"▲":"▼"}</span>`:"");});}
 $("#exportCsv").onclick=downloadCsv;
@@ -663,7 +681,7 @@ setInterval(tickClock,30000);
     const r=await fetch("ads.json",{cache:"no-store"});
     if(r.ok){const j=await r.json(); if(j&&j.ads&&j.ads.length){ Object.assign(DATA,j); DATA.ads.forEach(a=>ratings[a.id]=a.rating||0);} }
   }catch(e){/* offline / file:// — use embedded sample */}
-  buildCaseSelect(); updateSortArrows(); render(); tickClock();
+  buildCaseSelect(); buildAdvSelect(); updateSortArrows(); render(); tickClock();
 })();
 </script>
 </body>
